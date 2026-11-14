@@ -7,7 +7,7 @@ Las entradas van de la más vieja a la más nueva. Para agregar una, usar el for
 
 ## Sábado 14/11 — Elección del proyecto
 
-**Challenge elegido:** "Interplanetary Survival Guide: Martian Map" (enunciado textual en [`enunciado_oficial.md`](enunciado_oficial.md)).
+**Challenge elegido:** "Interplanetary Survival Guide: Martian Map" (enunciado textual en [`Consigna.md`](Consigna.md)).
 
 **Opciones de producto evaluadas:**
 | Opción | Por qué no / por qué sí |
@@ -62,10 +62,33 @@ El plan pasó por 3 versiones, revisadas por un subagente (Claude Opus) en dos r
 
 ---
 
+## Sábado 14/11 17:45 — Auditoría de datos, superprompt y plan final
+
+**Quién:** integrador + Claude
+**Qué pasó:** se evaluó un superprompt generado por GPT para dirigir el desarrollo y se auditaron los datos reales. El superprompt se adopta como lista de control de calidad, no como proceso: sus 9 fases, 8 agentes y documentos de metodología no entran en el plazo. `PLAN.md` se reescribió como plan final y se creó `CHECKLIST.md`.
+
+| Qué decía el plan | Qué pasó | Decisión |
+|---|---|---|
+| Heightmap en PNG uint16 | El navegador decodifica los PNG a 8 bits | Binario crudo uint16 little-endian, con offset y escala por archivo |
+| Dosis de la EVA como métrica de cada ruta | Con ~0,2 mGy/día, 30 min de diferencia son ~4 µGy: no discrimina rutas | La radiación sale de la comparación de rutas y pasa a un panel de contexto |
+| Convertir a mSv con un factor de calidad | Presentaría una medición del rover como dosis humana | No se convierte. Tres niveles: medido, presupuesto ilustrativo, exposición no modelada |
+| Blindaje por cielo visible como diferencial | Contradice que la radiación no influya en las rutas | Se elimina |
+| "Condiciones actuales" de RAD | — | Tasa de referencia con fecha; el evento del 20/05/2024 como escenario histórico |
+| Clima REMS opcional, con viento | Viento ≈0 % válido en los 8 soles | REMS entra como contexto histórico, sin viento |
+| Capa de geología | La imagen tiene 3 colores en toda la zona | Fuera de la interfaz |
+| Ruta "segura" | Ningún dato respalda transitabilidad humana | *Lower terrain difficulty*; restricción de pendiente común a las tres estrategias |
+| Pendiente sobre base de 3–5 m | La grilla de ruteo es de 4 m | Pendiente a 2 m y agregación por máximo, para no ocultar obstáculos |
+| Roles 1–5 programan | — | Claude implementa de punta a punta; los roles revisan |
+| Un hueco en RAD (2012–2013) | Hay un segundo hueco: 19/09 → 18/10/2018 | Se documentan los dos. Además, relleno `-1e31` en ~4,3 % de las filas |
+| Escenario sin definir | — | Pahrump Hills → Hematite Hotspot, solo ida, 2 astronautas, recogida con rover |
+
+**Impacto:** los roles 2 y 3 ya no calculan, revisan. El rol 5 tiene que entregar la selección de fotos antes del bloque 3.
+
+---
+
 ## Pendientes de verificar
-- Factor de calidad para pasar la dosis de µGy a mSv (del orden de 3 según Hassler et al. 2014): falta la cita exacta.
 - Si Hematite Hotspot fue detectado desde órbita por CRISM (serviría para validar).
-- Si CDAWeb permite pedidos desde el navegador (CORS), para mostrar RAD "en vivo".
+- Una referencia de velocidad de caminata de Apollo, para justificar la velocidad base del modelo.
 - Formato de la presentación global (¿archivo, link o ambos?): preguntarle al tutor.
 
 ---
