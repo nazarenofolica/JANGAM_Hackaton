@@ -65,7 +65,7 @@ One CSV per year (2012–2026), ~31,000 rows/year (one every ~17 min). Columns: 
 
 ### Point-of-view photos — `photos/` (MSL Navcam raw images, NASA)
 56 full-frame Navcam images pointing near the horizon (mast elevation -25° to +10°), up to 4 per stop, spread over
-different azimuths: 11 named waypoints from Pahrump/Darwin to Hematite Hotspot + 3 boxwork stops (sols 4537, 4602, 4669).
+different azimuths: 11 named waypoints from Darwin Outcrop to Hematite Hotspot + 3 boxwork stops (sols 4537, 4602, 4669).
 `photos/index.json` gives stop, sol, instrument, date, URL and credit for each image.
 - Some images show the rover deck (camera looking back): pick the best ones per stop.
 - No horizon-pointing images were found for Bradbury Landing, Rocknest and Glenelg (outside the main site).

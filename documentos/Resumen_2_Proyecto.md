@@ -1,6 +1,6 @@
 # Resumen 2 — El challenge "Interplanetary Survival Guide: Martian Map"
 
-> **Actualización (14/11, ya con la página oficial).** La sección 1 y la sección 2 abajo están **corregidas con el enunciado oficial**, que quedó textual en [enunciado_oficial.md](enunciado_oficial.md). El resto del documento (secciones 3 en adelante) sigue basado en README de otros equipos, así que tomalo como contexto y no como requisito.
+> **Documento de contexto.** Explica el challenge y qué hicieron otros equipos. Las secciones 1 y 2 salen del enunciado oficial ([enunciado_oficial.md](enunciado_oficial.md)); la 3 y la 4, de repos de otros equipos. **Las decisiones vigentes (sitio, datos, roles) están en [PLAN.md](PLAN.md)**, y por qué se tomaron, en [BITACORA.md](BITACORA.md).
 
 ## 1. De qué se trata (según el enunciado oficial)
 - Dificultad **Intermediate**. Temas: Human Exploration, Mars, Planets & Moons, Software, Space Exploration.
@@ -57,25 +57,12 @@ Todos están en GitHub, así que sirven de referencia, **no para copiar**:
 
 ## 4. Cómo se mapea esto a los criterios de evaluación
 Según la guía de entrega, se evalúa **Impact, Creativity, Validity, Relevance y Presentation**:
-- **Validity**: tus notas dicen que esperan algo viable con algo de escalabilidad. Usar datos reales y poder explicar de dónde sale cada número pesa más que una interfaz vistosa.
+- **Validity**: las notas del Discord dicen que esperan algo viable con algo de escalabilidad. Usar datos reales y poder explicar de dónde sale cada número pesa más que una interfaz vistosa.
 - **Relevance**: que el producto responda a lo que pide el challenge, que es un mapa multicapa para planificar una caminata.
 - **Creativity**: como muchos equipos van a hacer un "mapa de Jezero con pendientes", conviene decidir qué es lo distinto.
 
-## 5. Decisiones que les tocan a ustedes
-1. **Alcance de la zona.** Todo Marte con baja resolución, o un sitio concreto con más detalle. Un sitio concreto es más viable en dos días.
-2. **Qué capas incluir.** Con 3 o 4 bien hechas alcanza: relieve/pendiente, imagen base, una capa científica (mineralogía) y una de riesgo (radiación o clima).
-3. **Qué pregunta responde la herramienta.** Por ejemplo "¿qué ruta es segura y científicamente interesante?" o "¿qué sitios cumplen condiciones para una caminata?".
-4. **Tiles ya procesados vs. datos crudos.** Los tiles ahorran horas, pero hay que declararlo y dar crédito en "NASA Data" y "Other References".
-5. **Escalabilidad.** Dejar claro cómo se agregarían más sitios o capas, para respaldar lo que pidieron los tutores.
-6. **Uso de IA.** Declararlo según las reglas del resumen 1. Y recordá que tu organización local **prohíbe modelos chinos**.
-
-## 6. Riesgos
-- Los archivos del PDS son enormes y los formatos (IMG, JP2, GeoTIFF) pueden consumir horas si no se tiene experiencia.
-- Los servicios de tiles pueden estar caídos o limitar el uso durante el fin de semana. Conviene **descargar una copia local** de lo esencial.
-- Los cinco recursos oficiales son portales, no datasets descargables. Hay que decidir el sitio antes de bajar nada.
-- Worldview es de la Tierra: no cuenta como dato de Marte.
-
-## 7. Próximo paso sugerido
-1. Elegir **un objetivo científico y un sitio** (por ejemplo, boxwork en Mount Sharp, o Jezero).
-2. Definir **al menos tres capas de datos** para ese sitio y de dónde sale cada una.
-3. Recién ahí bajar un set mínimo y chico de datos de esa región, no del planeta entero.
+## 5. Qué decidimos nosotros
+Las preguntas que dejaba abiertas este resumen (zona, capas, qué pregunta responde la herramienta, escalabilidad) ya están resueltas en [PLAN.md](PLAN.md):
+- **Sitio:** Gale (Pahrump Hills → Hematite Hotspot) y, como segundo sitio, el boxwork de Mount Sharp. **No Jezero**, justamente porque es lo que eligió la mayoría de los otros equipos.
+- **Datos:** ya descargados y documentados en `data/README.md`.
+- **Recordatorios que siguen valiendo:** NASA Worldview es de la Tierra (no sirve como dato de Marte); declarar el uso de IA; la organización local **prohíbe modelos de IA chinos**.

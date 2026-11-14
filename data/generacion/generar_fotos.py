@@ -1,11 +1,11 @@
 """Descarga fotos de punto de vista de Curiosity (imágenes crudas públicas) para cada parada.
 
 Paradas = los 14 waypoints con nombre de Mars Trek + 3 paradas en la zona de boxwork. Para cada una se busca
-el sol en que Curiosity estuvo más cerca (waypoints oficiales de JPL, ver download_traverse.py) y se bajan
-hasta N imágenes completas (Mastcam izquierda a color; si no hay, Navcam). Si ese sol no tiene imágenes
-se prueba en soles vecinos.
+el sol en que Curiosity estuvo más cerca (waypoints oficiales de JPL) y se bajan hasta 4 imágenes completas
+que miren al horizonte (elevación del mástil entre -25° y +10°), repartidas en distintas direcciones.
+Prioriza Navcam (gran angular); Mastcam como respaldo. Si ese sol no tiene, prueba soles vecinos (hasta ±10).
 
-Requiere haber corrido antes download_vectors.py y download_traverse.py.
+Usa data/raw/gale/vector/curiosity_waypoints.geojson y msl_waypoints_jpl.geojson (ya están en el repo).
 Crédito obligatorio de las imágenes: NASA/JPL-Caltech/MSSS (Mastcam) o NASA/JPL-Caltech (Navcam).
 
 Salida: data/raw/photos/<parada>/<imageid>.jpg y data/raw/photos/index.json
@@ -31,7 +31,7 @@ PER_STOP = 4
 PREFERRED = ["NAV_LEFT_B", "NAV_RIGHT_B", "MAST_LEFT", "MAST_RIGHT"]
 # Elevación del mástil (grados) para una vista "hacia el horizonte". Las tomas del brazo/suelo están en ~ -47.
 EL_MIN, EL_MAX = -25.0, 10.0
-# Paradas en la zona de boxwork (soles con waypoints oficiales, ver documentos/PLAN_final.md)
+# Paradas en la zona de boxwork (soles con waypoints oficiales, ver documentos/PLAN.md)
 BOXWORK_SOLS = {"Boxwork - first close-up (sol 4536)": 4536, "Boxwork - mid (sol 4602)": 4602,
                 "Boxwork - south (sol 4669)": 4669}
 

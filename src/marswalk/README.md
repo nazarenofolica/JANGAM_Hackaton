@@ -2,7 +2,7 @@
 
 Turns `data/raw/` into one static package per site in `data/processed/<site>/` for the viewer.
 The package contract (`site.json`: fields, units, file paths) must be agreed first — see
-`documentos/PLAN_final.md`, section 4.
+`documentos/PLAN.md`, section 4.
 
 Planned modules (owners per the plan):
 - `terrain.py` — DEM crops → uint16 heightmaps (offset/scale per file), slope on a 3–5 m base, roughness (role 1)

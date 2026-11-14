@@ -22,7 +22,7 @@ data/processed/     Packages generated for the viewer (pipeline output)
 src/marswalk/       Processing pipeline (terrain, slope, routes, radiation budget)
 web/                Static 3D viewer (three.js), published on GitHub Pages
 notebooks/          Exploration and validation notebooks
-documentos/         Team documents (Spanish): challenge text, plan, submission rules
+documentos/         Team documents (Spanish): plan, decision log, challenge text, submission rules
 ```
 
 ## Getting the data

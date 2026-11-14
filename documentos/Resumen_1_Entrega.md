@@ -1,6 +1,6 @@
 # Resumen 1 — Cómo es la entrega
 
-Fuente: *Project Submission Guide* de NASA Space Apps 2026 (el PDF `Hackaton_guide.pdf`, 16 páginas), más tus notas del Discord. Cuando algo viene de tus notas y no de la guía, lo marco.
+Fuente: *Project Submission Guide* de NASA Space Apps 2026 ([`Hackaton_guide_corregido.pdf`](Hackaton_guide_corregido.pdf), 16 páginas), más las notas de la charla del Discord. Cuando algo viene de esas notas y no de la guía, lo marco.
 
 ## 1. Fechas
 - La entrega abre el **sábado 14/11 a las 9:00** y cierra el **domingo 15/11 a las 23:59**, hora de tu evento local.
@@ -55,8 +55,8 @@ Cinco: **Impact, Creativity, Validity, Relevance y Presentation.** El detalle es
 ## 7. Certificado
 Solo lo reciben los equipos que enviaron antes de la hora límite. Se baja desde Perfil → Participant Information → *Download Participant Certificate*, en PDF tamaño Letter. Conviene hacerlo desde una computadora. Verificá que tu nombre completo esté bien en el perfil.
 
-## 8. Lo de tus notas del Discord, cotejado con la guía
-| Tus notas | Guía oficial |
+## 8. Lo de las notas del Discord, cotejado con la guía
+| Notas del Discord | Guía oficial |
 |---|---|
 | Presentación local en español, 2–3 min máximo, puede no verse ninguna cara | La guía **no menciona** la presentación local. Eso es del evento local, así que confirmalo con los organizadores. |
 | Presentación global en inglés, "si o si archivo, no link de Drive" | **Posible contradicción.** La guía pide un *link público* y dice que no se puede subir video ni documentos al sitio. |

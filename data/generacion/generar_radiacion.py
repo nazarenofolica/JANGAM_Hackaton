@@ -3,7 +3,7 @@
 Dataset MSL_RAD_OBS-L2, variable DOSIMETRY_TOTAL_f (calidad filtrada). Columnas del CSV:
   EPOCH (UTC), TOTAL_DOSE_B (µGy/día, silicio), RTG_CORRECTED_DOSE_B (µGy/día, sin el aporte del
   generador del rover), TOTAL_DOSE_E (µGy/día, plástico equivalente a tejido).
-Es DOSIS ABSORBIDA, no dosis equivalente (mSv). Ver documentos/PLAN_final.md, sección 5.
+Es DOSIS ABSORBIDA, no dosis equivalente (mSv). Ver documentos/PLAN.md, sección 5.
 
 Salida: data/raw/rad/msl_rad_dose_<año>.csv
 Uso:    python data/generacion/generar_radiacion.py   (desde la raíz del repo)

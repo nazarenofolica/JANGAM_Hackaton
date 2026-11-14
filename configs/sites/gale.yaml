@@ -1,6 +1,6 @@
 # Configuración del sitio principal: Gale, tramo Pahrump Hills -> Hematite Hotspot.
 # Todas las coordenadas son grados decimales (lon Este, lat). CRS: grilla geográfica de Marte.
-# Origen de las cajas: ver documentos/PLAN_final.md, sección 2.
+# Origen de las cajas: ver documentos/PLAN.md, sección 2.
 
 site:
   id: gale
@@ -53,6 +53,6 @@ rad:
   end: "2026-11-10"
 
 rems:
-  # PDS Atmospheres Node, bundle PDS4 msl_rems. ~60 MB por sol: solo soles representativos.
+  # PDS Atmospheres Node, bundle PDS4 msl_rems. Solo el producto MODRDR (RMD), ~12 MB por sol: soles representativos.
   base_url: https://atmos.nmsu.edu/PDS/data/PDS4/msl_rems_bundle/data_calibrated
   sols: [1200, 1280, 1360, 1440, 1520, 1600, 1680, 1760]   # ~84 soles de separación, cubre un año marciano (669 soles)
