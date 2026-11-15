@@ -1,204 +1,211 @@
-# Plan de trabajo
+# Plan de trabajo — Marswalk Radar (plan 2D)
+
+> **Branch `plan2d`.** Este plan reemplaza, solo en esta branch, al plan 3D ("Marswalk — Decision Support"), que sigue vigente en `develop`. El porqué del cambio está en [`BITACORA.md`](BITACORA.md); el avance, en [`CHECKLIST.md`](CHECKLIST.md).
 
 Equipo: 6 personas + Claude. NASA Space Apps 2026, challenge "Interplanetary Survival Guide: Martian Map". Entrega: cierra **domingo 15/11 a las 23:59**. **Meta interna de envío: domingo 20:00.**
-**Este es el plan vigente.** El avance se lleva en [`CHECKLIST.md`](CHECKLIST.md); el porqué de cada cambio, en [`BITACORA.md`](BITACORA.md). Contexto: [`Consigna.md`](Consigna.md) (el challenge) y [`Entrega.md`](Entrega.md) (reglas de entrega).
 
 ## 1. Producto
 
-**Marswalk — Decision Support.** Un entorno 3D que permite explorar, comparar y justificar recorridos de una caminata marciana, generado por sitio a partir de un archivo de configuración.
+**Marswalk Radar**: la pantalla de una **tablet táctica** que el astronauta lleva durante la caminata (EVA) por el cráter Gale. Es un **radar centrado en el astronauta**, orientado hacia donde mira, que responde de un vistazo tres preguntas:
 
-La historia que se presenta es esta cadena, y cada eslabón tiene que poder mostrarse:
-
-1. **Datos científicos reales** — DEM, HiRISE, RAD, REMS, waypoints.
-2. **Procesamiento geoespacial** — coordenadas, pendiente, rugosidad, calidad.
-3. **Optimización de recorridos** — tiempo, dificultad del terreno, ciencia.
-4. **Marswalk — Decision Support** — explorar, comparar y justificar.
-
-El diferencial no es el mapa 3D: es que la interfaz explica por qué una ruta modelada difiere de otra y con qué supuestos.
-
-## 2. Sitios y escenario
-
-- **Sitio principal: Gale, Pahrump Hills → Hematite Hotspot.** Recorte de detalle lon 137.342–137.392, lat -4.740 a -4.652: **2,95 × 5,21 km a 2 m/px**. Curiosity recorrió 9,6 km ahí; 3,7 km en línea recta.
-- **Segundo sitio: boxwork** (lon 137.369–137.400, lat -4.819 a -4.783). Diferencial "generador" y **caso de estrés**: 25,7 % del terreno supera los 20°. Si no existe camino bajo el umbral, el motor lo informa y la interfaz lo muestra. No compromete el recorrido principal.
-- **Escenario por defecto (decidido 14/11, editable en YAML):** travesía **solo de ida**, **2 astronautas a pie**, recogida con rover presurizado en Hematite Hotspot. Nueve paradas con nombre disponibles dentro del recorte: Pahrump Hills, Marias Pass, Bagnold Dunes, Bagnold Dunes West End, Murray Buttes, Bagnold Dunes South, Vera Rubin Ridge, Top of Vera Rubin Ridge, Hematite Hotspot (~5,3 km uniéndolas en línea recta).
-- **Usuario:** un astronauta que planifica desde una consola en el hábitat. No hay HUD ni multiusuario.
-
-## 3. Datos — descargados y auditados el 14/11
-
-Catálogo en `data/README.md`; fuente y checksum de cada archivo en `data/raw/MANIFEST.json`. **No se descargan datos nuevos.**
-
-| Capa | Fuente | Estado tras la auditoría |
+| # | Pregunta del astronauta | Qué muestra el radar |
 |---|---|---|
-| Terreno | HiRISE DEM `Gale_DEM_SMG_1m` (Mars Trek) | 4 recortes float32, sin huecos, dimensiones = sidecars. Grilla equiangular: **px_x = 1,993 m, px_y = 2,000 m** |
-| Imagen | Mosaico HiRISE + CTX | HiRISE con las mismas dimensiones en píxeles que cada DEM. Falta el chequeo visual de alineación |
-| Térmico | THEMIS IR día y noche | 81 m/px: ~36 × 64 px sobre el detalle. **Solo contexto regional**, imagen renderizada, no calibrada |
-| Geología | USGS SIM 3292 | 3 colores en toda la imagen. **Se saca de la interfaz**; queda citada como fuente consultada |
-| Ruta y waypoints | Mars Trek + mapa oficial JPL | 1389 waypoints con sol y elevación; 587 dentro del detalle (soles 671–2929), 151 dentro del boxwork (soles 4384–4936) |
-| Radiación | CDAWeb `MSL_RAD_OBS-L2` | 407.817 filas, 17/08/2012 → 10/11/2026. **Relleno `-1e31` en ~4,3 % de las filas.** Huecos: 18/08/2012 → 22/03/2013 y 19/09 → 18/10/2018 |
-| Clima | PDS REMS (MODRDR) | 8 soles (1200–1760, dic 2015 → 2017). Aire, suelo, presión y humedad ≈100 % válidos; UV 60–94 %. **Viento ≈0 % válido: no se muestra** |
-| Fotos | Navcam de Curiosity | 56 fotos 1024², 4 por parada × 14 paradas, error de asociación ≤ 12 m. El índice no guarda el azimut |
+| 1 | **¿Por dónde camino sin atascarme ni caerme?** | Relieve oscuro de fondo, zonas rojas (pendiente > 20°), la ruta modelada en verde y el recorrido real de Curiosity como referencia |
+| 2 | **¿Cuánto tiempo me queda y cuándo tengo que volver?** | Reloj de la EVA, anillo ámbar de retorno (hasta dónde puedo llegar y todavía volver a tiempo al rover), clima histórico del momento del día y radiación medida por Curiosity, con un escenario de tormenta solar |
+| 3 | **¿Hacia dónde voy a investigar y qué voy a encontrar?** | Paradas científicas en cian, con distancia, desnivel (Δz) y la foto real que sacó Curiosity en ese lugar |
 
-**Verificaciones hechas:** 104/104 archivos pasan SHA-256. Norte arriba confirmado: elevación DEM − elevación JPL en 587 waypoints = +4,0 m (σ 6,2 m); con filas invertidas, σ = 246 m. Ruta Trek = 18,77 km.
-**Las capas de contexto tienen bbox ajustados a tiles, distintos del DEM de contexto:** se remuestrean a la grilla del paquete.
-**Descartadas:** minerales hidratados CRISM/OMEGA (0 detecciones en Gale) e inercia térmica TES (~83 km/px).
-**No van a Git:** fotos, radiación y clima crudos. Se regeneran con `python data/generacion/generar_todo.py`.
+**Es una simulación.** La posición del astronauta avanza sobre la ruta modelada con un reloj que se puede reproducir, pausar y adelantar. En una misión real vendría de odometría inercial y visual, y eso se aclara en pantalla. **No hay datos en vivo.**
 
-## 4. Arquitectura
+El diferencial: una interfaz simple y linda, donde **cada elemento sale de un dato real de la NASA o de un cálculo explicado**, y donde lo que no se puede saber se dice.
+
+## 2. Sitio y escenario
+
+- **Sitio:** Gale, de Pahrump Hills a Hematite Hotspot. Recorte lon 137.342–137.392, lat −4.740 a −4.652: **2,95 × 5,21 km a 2 m por píxel**. Es terreno que Curiosity recorrió: sirve para validar.
+- **Escenario por defecto** (editable en `configs/packages/gale_radar.yaml`, todos son supuestos):
+  - 2 astronautas a pie, **solo ida**; los recoge un rover presurizado en **Hematite Hotspot**.
+  - Paradas en orden: Pahrump Hills (inicio) → Marias Pass → Bagnold Dunes → Murray Buttes → Bagnold Dunes South → Vera Rubin Ridge → Top of Vera Rubin Ridge → Hematite Hotspot (recogida).
+  - Velocidad base 2,5 km/h en llano, 20 min por parada, **EVA de 6 h**, salida a las 10:00 hora solar local.
+- **Resultado de la ruta modelada** (calculado, `route/route.json`):
+
+| KPI | Valor |
+|---|---|
+| Distancia | **5,34 km** (3,69 km en línea recta) |
+| Tiempo estimado caminando | 162 min |
+| Tiempo en paradas | 120 min (6 × 20) |
+| EVA total / presupuesto | **282 / 360 min** (margen mínimo de retorno: 77 min) |
+| Desnivel | +346 m / −31 m |
+| Pendiente máxima en la ruta | 19,1° (límite: 20°) |
+| Coincidencia con Curiosity | 57 % del recorrido a menos de 50 m de su huella (Curiosity manejó 9,3 km entre los mismos puntos) |
+
+## 3. Cómo se responde cada pregunta (dato → cálculo → pantalla)
+
+### 3.1 Terreno y obstáculos
+- **Datos:** DEM HiRISE `dem_detail.tif` (altura en metros, 2 m/px) y el mosaico HiRISE alineado.
+- **Cálculo:**
+  - Pendiente en grados con un gradiente 2D sobre el DEM suavizado (σ = 1 px, base efectiva ~4–6 m).
+  - **Rojo = pendiente > 20°**: un 2,4 % del área.
+  - Ruta: grilla de 4 m (bloques 2×2, **máximo** de pendiente para no esconder obstáculos), grafo de 8 vecinos, celdas > 20° prohibidas, sin cortar esquinas, costo = tiempo de caminata según la pendiente (curva tipo Tobler). Camino mínimo (Dijkstra) parada por parada.
+- **Pantalla:** relieve gris oscuro, rojo, línea verde (ruta modelada) y línea blanca punteada (Curiosity, referencia).
+- **Descartado:** "píxeles oscuros de HiRISE = arena blanda". Se probó el 14/11: en las paradas que el rover llamó *Bagnold Dunes* el brillo queda en los percentiles 48 y 96, así que no separa arena de roca. Ver BITACORA.
+
+### 3.2 Ventana operativa y seguridad
+- **Anillo ámbar de retorno (isócrona):**
+  - Con el mismo grafo de rutas se calcula, para cada celda, cuántos minutos se tarda en caminar hasta el rover de recogida (`return_time_4m.png`).
+  - El anillo es la curva donde ese tiempo es igual al tiempo de EVA que queda. No es un círculo: se deforma alrededor de las pendientes.
+  - Reemplaza la idea original de un anillo por batería, temperatura y radiación: no hay datos que conecten esas variables con la distancia.
+- **Clima (REMS):** ciclo diario por hora (aire, suelo, presión, UV) de 8 soles históricos, con flags de confianza aplicados. Se muestra la curva con la ventana de la EVA (10:00–16:00) marcada y el "ahora" simulado. El suelo llega a su máximo cerca de las 13–14 h. Rótulo obligatorio: *Historical REMS observations at Gale Crater*. Sin viento: no hay datos válidos.
+- **Radiación (RAD), tres niveles:**
+  - **Medido:** tasa de referencia **185,6 µGy/día**, mediana del 11/10 al 10/11/2026.
+  - **Ilustrativo:** presupuesto de la EVA = tasa × 6 h = **46 µGy**. No es una dosis humana.
+  - **Exposición real:** *not modelled*.
+  - **Escenario histórico 20/05/2024:** la tasa pasó de ~160 a un pico de **8.378 µGy/día**. La peor ventana de 6 h midió **1.076 µGy**, 23 veces el presupuesto normal. Botón "Replay" y alerta ilustrativa cuando la tasa supera 3 × la referencia (supuesto declarado).
+
+### 3.3 Objetivos científicos
+- **Datos:** 9 paradas con nombre de Mars Trek (`curiosity_waypoints.geojson`), fotos Navcam de Curiosity (`index.json`, 4 por parada).
+- **Cálculo:** lon/lat → metros locales; distancia por la ruta, ETA y Δz respecto de la posición actual.
+- **Pantalla:** marcadores cian (próximas), violeta (ya visitadas), ámbar o blanco para la recogida. Tarjeta con nombre, distancia, ETA, Δz, foto con crédito y objetivo científico (**texto a cargo del equipo, con fuente**).
+
+## 4. Datos
+
+Catálogo en [`data/README.md`](../data/README.md); fuente y checksum de cada archivo en `data/raw/MANIFEST.json`. **No se descargan datos nuevos.** Se usan: DEM HiRISE (recorte `detail`), mosaico HiRISE, recorrido y paradas de Curiosity (Mars Trek + mapa JPL), RAD (15 CSV), REMS (8 soles) y fotos Navcam.
+**No se usan en esta versión:** THEMIS (81 m/px, demasiado grueso para un radar de cientos de metros), geología SIM 3292, CTX, los recortes `route_full`, `boxwork` y `context`.
+
+## 5. Arquitectura
 
 ```
-data/raw + MANIFEST  →  src/marswalk (Python)  →  data/processed/<sitio>/  →  web/ (three.js)
+data/raw  →  src/marswalk (Python)  →  data/processed/gale_radar/  →  web/ (three.js, estático)
 ```
 
-**Configuración.** `configs/sites/gale.yaml` no se toca (lo usan los scripts de descarga). Un YAML por paquete en `configs/packages/` (`pahrump_hematite.yaml`, `boxwork.yaml`): recorte, inicio, destino, paradas y supuestos del escenario. El segundo sitio sale de cambiar ese archivo.
-
-**Pipeline — `src/marswalk/`**, módulos chicos; `build.py` solo orquesta.
+- **Configuración:** `configs/packages/gale_radar.yaml` (escenario y supuestos). `configs/sites/gale.yaml` no se toca (lo usan los scripts de descarga).
+- **Pipeline (`src/marswalk/`, ya implementado):**
 
 | Módulo | Qué hace |
 |---|---|
-| `geo.py` | lon/lat ↔ metros locales Este/Norte ↔ fila/columna. Esfera r = 3389,5 km, origen en la esquina SO del recorte. Única fuente de la transformación |
-| `terrain.py` | Heightmap, pendiente, rugosidad y agregación a la grilla de ruteo |
-| `layers.py` | Remuestrea HiRISE, THEMIS y CTX a la grilla del paquete |
-| `route.py` | Grafo dirigido y camino mínimo |
-| `metrics.py` | Distancia, tiempo estimado, desnivel ±, pendiente máxima, bandas de pendiente, perfil |
-| `validation.py` | Comparación con Curiosity, sensibilidad, verificación de restricciones |
-| `radiation.py` | Serie RAD, tasa de referencia, presupuesto ilustrativo, escenario histórico |
-| `weather.py` | Ciclos diurnos REMS por sol |
-| `photos.py` | Copia y reduce las fotos elegidas |
-| `package.py` | Escribe y valida `site.json` |
-| `build.py` | `python -m marswalk.build configs/packages/<x>.yaml` |
+| `geo.py` | lon/lat ↔ metros locales ↔ fila/columna. Única fuente de la transformación |
+| `terrain.py` | Pendiente, sombreado del relieve, agregación a 4 m |
+| `route.py` | Grafo, ruta por paradas, isócrona de retorno, verificación |
+| `stops.py` | Paradas, huella de Curiosity, fotos reducidas |
+| `environment.py` | Resúmenes de RAD y REMS |
+| `package.py` | Escritura y validación del paquete |
+| `build.py` | Orquesta todo |
 
-Se reutiliza de `scripts/common.py`: `ROOT`, `load_config`, `sha256`. Los sidecars `data/raw/gale/**/*.json` son la fuente de bbox y dimensiones.
+- **Comando:** `python scripts/build_package.py configs/packages/gale_radar.yaml` (~15 s).
+- **Paquete (va a Git, 13 MB):** `site.json`, `terrain/` (relieve, HiRISE, pendiente, máscara roja, elevación uint16, tiempo de retorno), `route/` (ruta y huella de Curiosity), `science/stops.json` + `photos/`, `environment/` (radiación y clima), `preview.png`. El contrato completo, para quien programa el visor, está en [`web/README.md`](../web/README.md).
+- **Visor (`web/`):** three.js r187 copiado en `web/vendor/` (import map, sin build, sin CDN). Lee solo `data/processed/`. Se sirve con `python -m http.server` desde la raíz y en GitHub Pages.
+- **Tests:** `python -m pytest -q` (coordenadas, motor de rutas, validez del paquete).
 
-**Paquete — `data/processed/<sitio>/`** (va a Git, menos de 100 MB por archivo):
-`site.json` · `terrain/` · `textures/` · `routes/routes.geojson` · `science/stops.json` + `photos/` · `environment/radiation.json`, `rems.json` · `validation/validation.json`.
+## 6. Interfaz — la pantalla de la tablet
 
-`site.json` declara: `schema_version`, bbox, CRS, origen y transformación local, dimensiones, tamaño de píxel en metros **por eje**, orientación de filas, **offset, escala, rango, tipo y orden de bytes de cada ráster**, unidades, fuentes con fecha, `derivation` (cómo se obtuvo cada derivado), supuestos y advertencias.
+Pantalla única, apaisada (diseñar para **1366 × 768**), tema oscuro de alto contraste.
 
-**Visor — `web/`**: three.js copiado a `web/vendor/`, módulos ES, sin paso de build. GitHub Pages sirve la raíz del repo y un `index.html` raíz redirige a `web/`. Local: `python -m http.server` desde la raíz. **Solo lee `data/processed/`**: ningún pedido a servicios externos. Interfaz, README y repo **en inglés**.
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ MARSWALK RADAR · Gale Crater · SIMULATED EVA        LMST 11:42  EVA 01:42/06:00 ⓘ │
+├───────────────────────────────────────────────┬──────────────────────────────┤
+│                                               │ 1 TERRAIN                    │
+│            ╭───── N ─────╮                    │ slope here 6°  max ahead 14° │
+│         ╭──┤   250 m     ├──╮                 │ elevation −4.391 m           │
+│        │  red zones ▲ green route  │          ├──────────────────────────────┤
+│        │   · cyan stops (dist, Δz) │          │ 2 WINDOW & SAFETY            │
+│        │   ~ amber return ring     │          │ return margin 77 min         │
+│         ╰──┤  white dashed: rover  ├──╯       │ REMS daily curve (historical)│
+│            ╰─────────────╯                    │ RAD 185.6 µGy/day [Replay 24]│
+│   [250 m | 500 m | 1 km]   [Radar | Overview] ├──────────────────────────────┤
+│                                               │ 3 NEXT STOP                  │
+│                                               │ Murray Buttes · 412 m · +18 m│
+│                                               │ ETA 12 min  [Navcam photo]   │
+├───────────────────────────────────────────────┴──────────────────────────────┤
+│ ▶ ❚❚  ×60  ────●──────|─────|─────|─────|────  stop markers on the timeline    │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Dependencias:** `scipy` y `pytest` se suman a `requirements.txt` (ya están instalados); three.js se copia una vez. Nada más.
+**Radar (izquierda, protagonista):**
+- **Vista:** centrado en el astronauta y con el rumbo hacia arriba. Anillos de distancia con etiqueta y alcance de 250 m / 500 m / 1 km. Flecha de norte que gira.
+- **Capas:** fondo = relieve (`hillshade`) teñido gris azulado oscuro; rojo = `hazard`; verde = ruta modelada (tramo recorrido más tenue); blanco punteado = Curiosity (se puede apagar); ámbar = anillo de retorno.
+- **Paradas:** cian = próximas, violeta = visitadas. Etiqueta con distancia en metros y Δz. Las que quedan fuera del alcance aparecen como flechas en el borde del radar.
+- **Botón *Overview*:** vista cenital con el norte arriba y todo el recorrido, para ubicarse (y para la demo).
 
-## 5. Reglas científicas (obligatorias)
+**Panel derecho, una tarjeta por pregunta:**
+1. **Terrain:** pendiente bajo el astronauta, pendiente máxima en los próximos 200 m, elevación actual.
+2. **Window & safety:**
+   - Tiempo transcurrido / restante y margen de retorno (minutos que sobran para llegar al rover).
+   - Mini gráfico REMS del día (aire y suelo) con la ventana de la EVA y el "ahora"; selector de sol.
+   - Indicador RAD con la tasa de referencia y el botón *Replay 2024-05-20*. Si la tasa supera el umbral, aparece un banner de alerta ilustrativa.
+3. **Next stop:** nombre, distancia por la ruta, ETA, Δz, foto Navcam (al tocarla se agranda, con sol, fecha y crédito) y objetivo científico.
 
-### 5.1 Terreno y resolución
-- **Heightmap:** binario crudo **uint16 little-endian (`<u2`), por filas, fila 0 = norte**; `elevación_m = offset + escala × valor`, con offset y escala **por archivo**. No es PNG: el navegador decodifica los PNG a 8 bits.
-- **Continuidad entre archivos:** las elevaciones se decodifican a metros antes de combinarse. Nunca se comparan ni se mezclan valores uint16 de archivos distintos. Tests: error de cuantización ≤ escala/2 y diferencia acotada en el solape detalle/contexto.
-- **Pendiente:** en grados, a 2 m nativos, sobre el DEM suavizado con un σ documentado (base efectiva ~4–6 m, porque el ruido de HiRISE la infla).
-- **Rugosidad:** desvío estándar local del residuo DEM − DEM suavizado. Es un indicador de terreno irregular, **nunca "rocas detectadas"**.
-- **Agregación 2 m → 4 m (grilla de ruteo), en bloques 2×2:** **máximo** para la pendiente de restricción y la rugosidad, para no ocultar obstáculos locales; **media** para la elevación. Dimensiones impares: se replica el borde. Todo queda escrito en `site.json › derivation`.
+**Barra inferior:** reproducir y pausar, velocidad (×30, ×60, ×300), línea de tiempo con marcas en cada parada. **Botón ⓘ:** panel *Assumptions & sources* con `site.json › assumptions`, `warnings` y `sources`, más la validación contra Curiosity.
 
-### 5.2 Motor de rutas
-- **Una sola restricción dura de pendiente, común a las tres estrategias** y definida en el YAML. Una celda es intransitable si su pendiente agregada supera el umbral.
-- **Las estrategias difieren solo en el costo**, nunca en la restricción.
-- **Grafo dirigido de 8 vecinos:** ascenso y descenso tienen costo distinto según la pendiente con signo del tramo. Distancias en metros reales por eje.
-- **Sin corte de esquinas:** una diagonal solo se permite si las dos celdas ortogonales adyacentes son transitables.
-- **Verificación posterior:** la polilínea final se remuestrea sobre el ráster de restricción y se comprueba que no pisa celdas bloqueadas. El resultado va a `validation.json`.
-- **Sin camino:** si inicio y destino no se conectan bajo el umbral, el motor lo informa con el umbral usado. No falla y no relaja la restricción en silencio.
-- **Tres rutas modeladas:**
-  - *Fastest* — mínimo tiempo estimado.
-  - *Lower terrain difficulty* — el costo penaliza pendiente y rugosidad.
-  - *Science-priority* — pasa por las paradas elegidas y suma el tiempo de parada.
-- Las rutas se calculan en Python y se sirven como geometría estática. No hay A* en el navegador.
+**Paleta:**
 
-### 5.3 Velocidad
-- La relación velocidad–pendiente (curva de tipo senderismo terrestre a 1 g, escalada a una velocidad base) es un **supuesto exploratorio, no un modelo validado para astronautas con traje en Marte**. Se dice así en la interfaz y en el README.
-- **Sensibilidad obligatoria** sobre velocidad base y pendiente máxima, precalculada y mostrada en tabla.
-- Valores iniciales propuestos, a confirmar por el equipo: velocidad base 2,5 km/h (se barre 1,5 / 2,5 / 3,5), pendiente máxima 20° (se barre 15 / 20 / 25), 20 min por parada.
+| Elemento | Color |
+|---|---|
+| Fondo | `#0B0F14` |
+| Relieve | gris azulado |
+| Peligro | `#FF3B30` al 70 % |
+| Ruta | `#34C759` |
+| Paradas próximas | `#00E5FF` |
+| Paradas visitadas | `#B388FF` |
+| Anillo de retorno | `#FFB300` |
+| Curiosity | blanco al 60 %, punteado |
 
-### 5.4 Radiación (RAD)
-Tres niveles, separados en los datos y en la interfaz:
+Tipografía del sistema; números en monoespaciada. Animaciones suaves y nada que distraiga del radar.
 
-| Nivel | Qué es | Cómo se rotula |
-|---|---|---|
-| Medido | Tasa de dosis absorbida de Curiosity RAD, µGy/día, detector E (plástico tejido-equivalente). Referencia: mediana de los últimos 30 días con dato, 185,5 µGy/día al 10/11/2026 | *Measured by Curiosity RAD*, con fecha y ventana |
-| Presupuesto ilustrativo | Tasa de referencia × duración fija del escenario | *Illustrative EVA budget* — no es una dosis humana estimada: sin traje, sin autoblindaje del cuerpo, sin factor de calidad |
-| Exposición real | No se calcula | *Actual astronaut exposure: not modelled* |
+## 7. Reglas científicas y terminología (obligatorias)
 
-- **No se convierte a mSv.**
-- **20/05/2024:** escenario **histórico**. Se muestra la dosis que RAD midió en la ventana de mayor dosis de ese evento, de igual duración que el escenario. No es una predicción.
-- **La radiación no entra en el costo ni en la comparación de rutas.** Vive en un panel de contexto aparte y se calcula con la duración del escenario, no por ruta.
-- Se muestran el rango del ciclo solar (medianas anuales 156–312 µGy/día) y los dos huecos de datos.
-- No hay mapa de radiación por píxel ni blindaje por cielo visible.
+- **Pendiente:** en grados, del DEM suavizado (σ documentado). Obstáculos de menos de ~4–6 m (rocas sueltas) no se resuelven, y se dice.
+- **Ruta:** una sola restricción dura (20°); grafo dirigido; sin cortar esquinas; si no hay camino, se informa y no se relaja el límite. Verificación: la ruta no pisa celdas prohibidas (`validation.path_check`).
+- **Velocidad:** curva tipo senderismo terrestre escalada a 2,5 km/h. **Es un supuesto exploratorio, no un modelo validado para astronautas con traje en Marte.** Se dice en la interfaz.
+- **Radiación:** tres niveles (medido / presupuesto ilustrativo / exposición real no modelada). **No se convierte a mSv.** El 20/05/2024 es un escenario histórico, no una predicción.
+- **Clima:** "Historical REMS observations", con sol y fecha. Nunca "current weather".
+- **Simulación:** la posición es simulada; se rotula *Simulated EVA*.
+- **Palabras permitidas:** *modelled route*, *estimated time*, *terrain difficulty*, *simulated*, *historical*.
+- **Palabras prohibidas:** *safe route*, *safe*, *real-time*, *live*, *AI-powered*. Curiosity es una referencia histórica, no una prueba de que un humano pueda pasar.
+- **Cada dato** dice si es medido, derivado o supuesto, con unidad y fuente.
 
-### 5.5 Clima (REMS)
-- Se rotula **"Historical REMS observations at Gale Crater"**, con soles y fechas. Nunca "current weather" ni pronóstico.
-- Ciclos diurnos por sol de temperatura de aire, de suelo, presión y UV, aplicando los flags de confianza. No se interpola entre soles.
-- Viento: "not available in these sols".
+## 8. Alcance
 
-### 5.6 Terminología
-Se usa *modelled route*, *estimated traverse time*, *terrain difficulty*. **No se usa** *safe route*, *safe*, *real-time*, *live*, *AI-powered*, ni se afirma transitabilidad garantizada. Curiosity es una referencia histórica, no una prueba de transitabilidad humana.
+**Entra:** el radar, el panel de 3 tarjetas, la línea de tiempo, el escenario RAD 2024, las fotos, la vista *Overview*, el panel de supuestos y GitHub Pages.
+**No entra:** datos en vivo, rutas alternativas en el visor, 3D, THEMIS, geología, boxwork, conversión a mSv, viento, backend, ML.
+**Si sobra tiempo (en este orden):** selector de 2–3 rutas precalculadas (rápida / menor dificultad), tabla de sensibilidad (velocidad × pendiente máxima), capa HiRISE como fondo alternativo.
 
-### 5.7 Interfaz
-- Pantalla inicial: una ruta seleccionada y 5–6 KPIs (distancia, tiempo estimado, desnivel +/−, pendiente máxima, bandas de pendiente, paradas).
-- Capas secundarias apagadas por defecto; cada capa con leyenda y unidad.
-- Vista 3D orbital y vista cenital ortográfica. Exageración vertical 1× por defecto, con etiqueta visible. Norte y escala gráfica.
-- **Recomendación en 2–3 frases construida por reglas sobre las métricas reales. Sin LLM.**
-- Cada dato distingue medido / derivado / supuesto, con fuente y resolución al seleccionarlo.
-- Sin oxígeno como KPI y sin semáforos con umbrales inventados.
-
-## 6. Validación
-- **Contra Curiosity**, entre los mismos puntos de inicio y destino: % de la ruta dentro de un corredor de 50 m, desvío lateral medio y costo modelado del recorrido real frente al de la ruta óptima. Se espera poca coincidencia de *Fastest* (Curiosity recorrió 9,6 km para 3,7 km en línea recta) y más de *Science-priority*; se explica, no se oculta.
-- **Interna:** `pytest` sobre coordenadas, cuantización, motor de rutas, relleno de RAD y validador del paquete. Reproducibilidad: dos corridas dan las mismas rutas.
-- **Revisión final (antes de congelar el código):** responder sí a las 13 preguntas, corrigiendo primero lo que sea error científico, geoespacial o de interpretación, después usabilidad y por último estética.
-  1. ¿La elevación mostrada corresponde al DEM?
-  2. ¿El norte está orientado correctamente?
-  3. ¿Las rutas están en el mismo sistema de coordenadas que el terreno?
-  4. ¿Las distancias se calculan en metros o km y no en grados?
-  5. ¿La pendiente está en la unidad declarada (grados)?
-  6. ¿La exageración vertical está informada en pantalla?
-  7. ¿Las tasas de RAD tienen unidad, período y fuente, y el presupuesto está rotulado como ilustrativo (§5.4)?
-  8. ¿REMS aparece como observación histórica (§5.5)?
-  9. ¿Las fotos corresponden al waypoint indicado?
-  10. ¿Ningún dato de baja resolución (THEMIS, geología) se presenta como detalle local?
-  11. ¿Ninguna ruta se presenta como segura o con transitabilidad garantizada (§5.6)?
-  12. ¿Se distinguen mediciones, derivados y supuestos?
-  13. ¿El usuario entiende qué ruta está viendo y por qué se recomienda?
-
-## 7. Alcance
-**Entra:** paquete y visor completos de Pahrump Hills → Hematite Hotspot; textura HiRISE; capas de pendiente y rugosidad; 3 rutas modeladas; panel de decisión; itinerario con fotos; panel de contexto (RAD en tres niveles, REMS histórico); tabla de supuestos y de sensibilidad; gráfico de validación; boxwork generado por YAML.
-**No entra:** blindaje por cielo visible, conversión a mSv, viento, geología en la interfaz, A* en el navegador, fetch en vivo de RAD, HUD, backend, más de un sitio secundario.
-**Prioridad:** el recorrido principal completo y funcional va antes que el boxwork.
-
-## 8. Bloques e hitos
-Claude implementa los bloques en orden; el detalle y el estado están en [`CHECKLIST.md`](CHECKLIST.md). No hay fases de aprobación entre bloques: se construye, se valida y se documenta de forma incremental.
+## 9. Bloques e hitos
 
 | Bloque | Entregable | Condición para seguir |
 |---|---|---|
-| 0 | Documentación: este plan, checklist, bitácora | — |
-| 1 | `geo`, `terrain`, `layers`, `package` y sus tests; paquete real de Gale; visor mínimo | Terreno real visible, texturado y alineado |
-| 2 | `route`, `metrics`, `validation`, `radiation`, `weather` | 3 rutas reproducibles que no violan la restricción |
-| 3 | Visor completo del recorrido principal | Flujo completo en local |
-| 4 | Boxwork por YAML; panel de supuestos y validación | **Dom 11:00 — congelar funcionalidades** |
-| 5 | Revisión, pasada de UX a 1366×768, README en inglés | **Dom 17:00 — congelar código y etiquetar `v1.0`** |
+| 0 ✓ | Plan 2D, pipeline, paquete `gale_radar`, tests, three.js copiado | Hecho el dom 15/11 (madrugada) |
+| A | Radar mínimo: relieve, rojo, ruta, Curiosity, paradas, posición simulada, rumbo arriba, anillos de distancia | Se ve el radar con datos reales y la posición avanza |
+| B | Anillo ámbar, panel de 3 tarjetas, línea de tiempo, foto, REMS y RAD con *Replay* | Las 3 preguntas se responden en pantalla |
+| C | *Overview*, panel de supuestos, pulido visual, prueba a 1366×768, `index.html` raíz → `web/`, GitHub Pages | **Dom 11:00 — congelar funcionalidades** |
+| D | Revisión final (§10), README, demo | **Dom 17:00 — congelar código**; 17–19 grabar demo; **20:00 enviar** |
 
-**Domingo:** 17:00–19:00 grabar la demo. **20:00 enviar** el formulario y la entrega local.
+## 10. Revisión final (antes de congelar el código)
 
-## 9. Roles
-Claude implementa pipeline y visor. Cada rol revisa y valida su área y hace lo que Claude no puede.
+1. ¿Las distancias están en metros y el norte bien orientado?
+2. ¿La ruta y las paradas caen sobre el terreno correcto? Comparar con `preview.png`.
+3. ¿El anillo ámbar se achica a medida que pasa el tiempo y la ruta queda adentro?
+4. ¿Toda la información ambiental dice "historical" y RAD tiene sus tres rótulos?
+5. ¿Las fotos corresponden a su parada y tienen crédito?
+6. ¿Aparece en algún lado "safe", "real-time" o "live"?
+7. ¿Se ve *Simulated EVA* y el panel de supuestos?
+8. ¿Funciona sin internet y sin errores de consola?
+9. ¿Alguien que no es del equipo entiende la pantalla en 10 segundos?
+
+## 11. Roles
 
 | # | Rol | Tarea |
 |---|---|---|
-| 1 | Terreno y contrato | Revisar `site.json` y el chequeo de alineación |
-| 2 | Ruta y validación | Confirmar velocidad base, pendiente máxima y tiempo por parada; revisar el gráfico de validación |
-| 3 | Radiación y clima | Revisar que el panel respete la sección 5.4 y 5.5 |
-| 4 | Visor | Activar GitHub Pages y probar el link en ventana privada |
-| 5 | Interfaz y fotos | Elegir 1–2 fotos por parada, descartando las que muestran el rover |
-| 6 | Entrega y narrativa | Texto del objetivo científico por parada con fuente; guion, demo y formulario; consultas al tutor |
+| 1 | Terreno | Revisar `preview.png` y la alineación en el visor |
+| 2 | Ruta | Confirmar o cambiar los supuestos del YAML (velocidad, 20°, paradas, 6 h) y reconstruir el paquete |
+| 3 | Radiación y clima | Revisar que los paneles respeten §3.2 y §7 |
+| 4 | Visor | Correr el visor, GitHub Pages, probar el link en una ventana privada |
+| 5 | Interfaz y fotos | Elegir 1–2 fotos por parada (algunas muestran el rover) |
+| 6 | Entrega y narrativa | Objetivo científico por parada con fuente; guion, demo y formulario |
 
-## 10. Cumplimiento
-- [ ] Todo en inglés (formulario, interfaz, README).
-- [ ] Uso de Claude declarado en el campo SI, el README y los metadatos. Imágenes generadas con IA: marca de agua.
-- [ ] Sin logos ni insignias de misión de NASA.
-- [ ] Demo: máx. 7 slides o 30 s. Slides con nombre del equipo, integrantes y challenge.
-- [ ] Links probados en ventana privada por alguien ajeno al equipo.
-- [ ] Confirmar que los 6 están en el mismo Local Event.
-- [ ] `v1.0` al enviar; no tocar `main` después de las 23:59.
-- [ ] No copiar código de los repos de otros equipos.
-- [ ] Sin imagen, video o audio de menores de 18 años.
-- [ ] Sin modelos de IA chinos (regla del evento local).
-- [ ] Un responsable del Lock del formulario.
-- [ ] Preguntar al tutor por el formato de la presentación global y cuándo es la presentación local.
+## 12. Cumplimiento
 
-## 11. Decisiones
-**Tomadas el 14/11:** sitios; escenario por defecto; visor three.js sin build; Claude implementa de punta a punta; métrica de validación de la sección 6; consola de planificación en el hábitat.
-**Abiertas:** confirmar velocidad base, pendiente máxima, tiempo por parada y duración del escenario; qué paradas visita *Science-priority*; turnos de sueño; quién consulta al tutor; quién maneja el Lock del formulario.
+Igual que en el plan 3D: todo en inglés; uso de IA declarado (Claude y Fable); sin logos de NASA; demo ≤ 7 slides o ≤ 30 s; links probados en una ventana privada; los 6 en el mismo Local Event; etiqueta `v1.0`; sin imágenes de menores; sin modelos de IA chinos (regla local). Detalle en [`Entrega.md`](Entrega.md).
+
+## 13. Decisiones
+
+- **Tomadas (15/11, branch `plan2d`):** radar 2D en tablet; simulación en lugar de tiempo real; isócrona de retorno en lugar de un anillo por batería; sin la detección de arena por brillo; Curiosity solo como referencia; escenario de 6 paradas científicas y 6 h; pipeline v0 implementado por Claude; interfaz inicial generada con Fable (three.js).
+- **Abiertas:** confirmar los supuestos del escenario; textos científicos; selección de fotos; si el resultado final sale de esta branch o de `develop` (3D).

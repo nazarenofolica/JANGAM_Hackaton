@@ -103,3 +103,116 @@ El plan pasó por 3 versiones, revisadas por un subagente (Claude Opus) en dos r
 **Decisión:** ...
 **Impacto:** <qué cambia para otros roles, si algo>
 ```
+
+---
+
+## Domingo 15/11 00:20 — Branch `plan2d`: del visor 3D al radar 2D
+
+**Quién:** Agus (idea) + Claude (ajustes, pipeline y documentación)
+**Qué decía el plan:** visor 3D en three.js para planificar desde una consola en el hábitat, comparando 3 rutas ("Marswalk — Decision Support"). Ese plan sigue vigente en `develop`.
+**Qué pasó:** se propuso una interfaz más simple y útil para el momento de la caminata: un **radar táctico en tablet**, centrado en el astronauta, que responde 3 preguntas (por dónde camino, cuánto tiempo me queda, adónde voy a investigar). Se revisó la idea contra los datos y las reglas del plan, y se ajustó antes de implementarla.
+
+| Idea original | Qué pasó | Decisión |
+|---|---|---|
+| Interfaz "en tiempo real" | No hay datos en vivo: todo es histórico | **EVA simulada**: la posición avanza sobre la ruta modelada con un reloj; rótulo *Simulated EVA* |
+| Píxeles oscuros de HiRISE = arena blanda (rojo) | Probado: en las paradas *Bagnold Dunes* el brillo da percentil 48 y 96 (no oscuro); solo *Bagnold Dunes South* es oscura (p19) | **Descartado.** El rojo es solo pendiente > 20° |
+| Línea verde = "ruta segura validada por Curiosity" | Que pase un rover no prueba que pueda pasar un humano; el plan prohíbe "safe". Curiosity hizo 9,3 km entre puntos separados por 3,7 km en línea recta | Verde = **ruta modelada**; Curiosity = línea punteada de referencia |
+| Anillo ámbar por batería, temperatura y radiación | No hay datos de batería ni de su relación con la temperatura; la dosis de unas horas (~46 µGy en 6 h) no limita la distancia | **Isócrona de retorno**: minutos para caminar desde cada celda hasta el rover (mismo motor de rutas). El anillo = tiempo restante de EVA |
+| Salir a la tarde para "ahorrar batería" | Sin modelo de traje | Curva REMS histórica con la ventana de la EVA marcada, sin promesas de batería |
+| Alerta de retorno inmediato por RAD | No hay monitoreo en vivo; el umbral sería inventado | Escenario histórico 20/05/2024 (*Replay*) con alerta **ilustrativa** a 3 × la referencia (supuesto declarado) |
+| Comparar 3 rutas (plan 3D) | Complica la pantalla de campo | Una ruta por las paradas; alternativas solo si sobra tiempo |
+
+**Implementado en esta branch (Claude, 15/11 00:00):** pipeline `src/marswalk/` (coordenadas, pendiente, grafo de rutas, isócrona, RAD, REMS con flags de confianza, fotos), paquete `data/processed/gale_radar/` (13 MB), 9 tests en verde y three.js r187 en `web/vendor/`.
+**Escenario por defecto:** Pahrump Hills → 6 paradas → Hematite Hotspot; 5,34 km; EVA de 282/360 min; pendiente máxima 19,1°.
+**No se usan en el radar:** THEMIS (81 m/px), geología SIM 3292, CTX y los recortes `route_full`, `boxwork` y `context`.
+**Pendiente:** la interfaz three.js la genera Fable a partir de `web/README.md` y `PLAN.md` §6.
+**Detalle técnico:** la grilla de ruteo de 4 m conserva el bbox del DEM con borde replicado, así que sus celdas miden 3,98 × 4,00 m. El error de posición es menor a 2 m en el borde S/E.
+**Impacto:** roles 2 y 3 revisan los supuestos del YAML y los paneles; rol 5 elige fotos; rol 6 escribe `science_notes` en el YAML.
+
+---
+
+## Domingo 15/11 00:25 — Visor del radar (bloques A y B) y tres ítems adelantados del bloque C
+
+**Quién:** Agus (pedido) + Fable (interfaz)
+**Qué decía el plan:** el anillo ámbar de retorno es una capa del radar (§6); la vista *Overview*, el panel ⓘ y las flechas de borde son del bloque C.
+**Qué pasó:**
+- **El anillo ámbar nunca entra en el radar con el escenario actual.** El tiempo de retorno más alto de toda el área es de 160 min, así que mientras queden más de 160 min de EVA (hasta t ≈ 200 min) no hay ninguna celda fuera del rango de retorno y el anillo no existe. Después aparece, pero siempre a más de 2 km del astronauta (2,44 km en t = 262; 2,02 km al final), porque el margen mínimo es de 77 min. El alcance máximo del radar es 1 km.
+- `return_time_4m.png` guarda minutos pares (2 × valor). El contorno se dibuja en un nivel impar para que caiga entre dos valores de celda; por eso el anillo avanza en saltos de 2 min de simulación (unos 80 m).
+- La advertencia de `site.json` "All environmental data are historical observations, not live or forecast values." contiene la palabra "live", que §7 prohíbe. El visor la muestra tal cual en el panel ⓘ porque `data/processed/` no se edita a mano.
+
+**Decisión:**
+- El anillo se implementó como dice `web/README.md` (shader sobre `return_time`, con un velo ámbar tenue fuera del rango). Se agregó en el radar el recuadro *Return limit*, que dice si el anillo todavía no existe o a qué distancia está.
+- Se adelantaron del bloque C la vista *Overview* (única vista donde se ve el anillo), el panel ⓘ (§7 pide que el supuesto de velocidad se diga en la interfaz) y las flechas de borde (a 250 m casi todas las paradas quedan fuera del alcance).
+- Etiquetas de parada en el radar: distancia en **línea recta**, que coincide con los anillos de distancia. La distancia **por la ruta** va en la tarjeta *Next stop*.
+- *Replay 2024-05-20*: el pico horario del evento se ubica 2 h después del inicio de la EVA (supuesto del replay, dicho en el tooltip). Entre horas se interpola linealmente.
+- Parámetros de URL para la demo y las pruebas: `t`, `play`, `speed`, `range`, `view`, `replay`, `sol`, `panel=info` (documentados en `web/README.md`).
+
+**Impacto:**
+- Roles 2 y 3: decidir si el anillo tiene que verse en el radar. Opciones: bajar el presupuesto de EVA en el YAML (con 6 h sobran 77 min), agregar un alcance mayor, o dejarlo como capa de *Overview*.
+- Quien mantiene el pipeline: cambiar el texto de esa advertencia en el origen y reconstruir el paquete, o aceptar la negación "not live".
+- No se corrió `python -m pytest -q` en esta sesión: el Python de esta máquina no tiene `pytest` instalado y no se tocó código Python.
+
+---
+
+## Domingo 15/11 01:20 — Tercera vista: mapa 3D inmersivo (*3D walk*)
+
+**Quién:** Nazareno (pedido) + Fable (interfaz)
+**Qué decía el plan:** §8 deja el 3D fuera del alcance de esta branch ("No entra: … 3D"); el visor tiene dos vistas, *Radar* y *Overview*.
+**Qué pasó:** se pidió sumar, además del radar y del *Overview*, un mapa 3D con estética de visor futurista (referencia: el HUD de Subnautica), donde las métricas aparecen a medida que se camina y se priorizan las de más valor (radiación, temperatura).
+**Decisión:**
+- Se agrega una **tercera vista `3D`** al mismo visor. No se mezcla con `develop`: es código nuevo (`web/view3d.js`) que lee el mismo paquete `gale_radar`, sin datos ni librerías nuevas (three.js de `web/vendor/`).
+- El relieve 3D sale de `terrain/elevation_4m.u16` (4 m, **escala vertical 1:1**), con `hirise` y `hillshade` como textura. El color es un **tinte estilizado** del HiRISE en grises, no color medido, y la luz no sigue la hora del día: se dice en la leyenda.
+- **Datos espaciales anclados al terreno** (pendiente > 20°, curvas de nivel cada 10 m, ruta, huella de Curiosity, paradas, límite de retorno). **Datos temporales en el HUD** (RAD y REMS): no se clavan en el terreno porque no son mediciones de ese punto, sino series históricas por hora.
+- Valen las mismas reglas de §7: RAD con sus tres rótulos, REMS como *historical* con sol y fecha, *Simulated EVA*, sin "safe", "live" ni "real-time".
+- En la vista 3D el panel de 3 tarjetas se reemplaza por el HUD y el radar pasa a ser un mini radar en la esquina. *Radar* y *Overview* no cambian.
+- Se agrega la velocidad **×10** (a ×60 el astronauta avanza ~40 m por segundo de pantalla, demasiado para una cámara de seguimiento).
+
+**Impacto:** `PLAN.md` §8 queda desactualizado en ese punto ("3D" ya no está fuera de alcance en `plan2d`); lo decide el equipo. La pasada visual del bloque C ahora incluye la vista 3D. Rol 3: revisar los rótulos de RAD y REMS del HUD.
+
+**Implementado (Fable, 15/11 02:00):**
+- `web/view3d.js` (módulo nuevo), más cambios chicos en `main.js`, `index.html` y `style.css`. El módulo recibe los datos ya cargados por el radar y solo pide dos archivos más del paquete.
+- **Lo que aparece al caminar:** un registro de eventos calculado una sola vez a partir del paquete y mostrado según el reloj de la EVA (por eso funciona al mover la línea de tiempo), dos carteles anclados al terreno (la celda > 20° más cercana y el punto más cercano de la huella de Curiosity, con su sol) y la ficha de la parada, que se abre al llegar.
+- **Rendimiento:** con el relieve completo a 4 m (1,9 millones de triángulos) la GPU integrada daba ~31 cuadros por segundo reproduciendo. Se agregaron niveles de detalle por distancia (cada 1, 2, 4 u 8 celdas, con faldones para tapar las juntas) y el HUD pasó a actualizarse ~10 veces por segundo. Quedó en 45–50.
+- **El pico del *Replay* en el registro** es el de la serie horaria (8.025 µGy/día), no el `peak_value` de 10 minutos (8.378): es la misma serie que ya usaba el radar.
+- **No se hizo:** vista en primera persona (a 4 m por celda el suelo cercano se ve borroso), exageración vertical, y hora del día en la iluminación (haría falta la posición del Sol; se prefirió decir que la luz es fija).
+- `python -m pytest -q`: 9 pasan (no se tocó código Python).
+
+---
+
+## Domingo 15/11 17:20 — POC simplificado: dos entidades, radar limpio y 3D en primera persona
+
+**Quién:** Agus (pedido) + Fable (interfaz)
+**Qué decía el plan:** §6 pide un panel de 3 tarjetas con REMS, RAD y *Replay*; el bloque C3D tenía una cámara de seguimiento con HUD.
+**Qué pasó:** el equipo pidió corregir y simplificar el POC: los datos en pantalla eran confusos y sobraba texto explicativo.
+**Decisión:**
+- **Dos entidades.** Un robot explorador sale 60 min antes que la tripulación y recorre la misma ruta modelada con los mismos tiempos; la tripulación sale en t = 0. Los 60 min son un supuesto del visor (`ROBOT_LEAD_MIN` en `web/main.js`), no del YAML. El reloj de misión va de −60 min a la llegada de la tripulación; el robot llega al punto de recogida una hora antes y espera ahí.
+- **Radar a pantalla completa**, centrado en la tripulación. Quedan *Layers* a la izquierda y dos tarjetas: TERRAIN (pendiente, máxima en 200 m, elevación) y WINDOW (transcurrido, restante, margen de retorno). El alcance ahora es la distancia del centro al borde superior.
+- **Se quitaron de la pantalla** REMS, RAD con *Replay* y alerta, la tarjeta *Next stop*, los recuadros de rumbo, alcance y límite de retorno, y todas las notas explicativas. El paquete conserva esos datos.
+- **Paradas clickeables:** la tarjeta 3 pasó a ser una ventana que se abre desde cada parada del mapa.
+- **3D en primera persona** a 1,7 m del suelo, sin HUD: relieve, rojo, ruta, columnas de luz en las paradas, el segundo tripulante y el robot. Se quitaron curvas de nivel, grilla, límite ámbar, carteles, registro de eventos, diales y mini radar.
+- Se mantuvieron el rótulo *Simulated EVA* y el panel ⓘ (ahora con el supuesto del robot), porque §7 los pide.
+**Impacto:**
+- §7 exigía los tres rótulos de RAD y el rótulo de REMS: ya no aplican porque esos datos no se muestran. Si vuelven, vuelven con sus rótulos.
+- Quedan sin efecto los ítems tildados de REMS, RAD, *Replay* y *Next stop* (bloque B) y el HUD del bloque C3D. `PLAN.md` §6 no se actualizó: lo decide el equipo.
+- A 4 m por celda el suelo cercano se ve liso en primera persona (limitación ya anotada el 15/11 01:20).
+- No se tocó código Python ni el paquete de datos.
+
+---
+
+## Domingo 15/11 18:20 — Robot a 1 km/h y vista 3D con visor, radiación y panel de simulación
+
+**Quién:** Agus (pedido) + Fable (pipeline e interfaz)
+**Qué decía el plan:** §8 deja fuera los datos en vivo; §7 prohíbe "real-time" y "live". La entrada de las 17:20 había dejado la vista 3D sin datos y el robot con los tiempos de la tripulación.
+**Qué pasó:** el equipo pidió que el robot vaya a su propia velocidad y que la vista 3D muestre lo que el robot le informa a la tripulación, con alertas sonoras que se puedan probar.
+**Decisión:**
+- **Robot:** 1 km/h constante sobre la ruta, sin paradas (`scenario.robot_speed_kmh` en el YAML; supuesto por terreno conocido, contra los ~0,15 km/h de Curiosity). El visor calcula la salida para que vaya siempre al menos 500 m por delante (`ROBOT_MIN_GAP_M` en `web/main.js`), redondeada a 10 min: **sale 90 min antes** y llega al punto de recogida 52 min antes que la tripulación.
+- **Pipeline:** `environment.py` agrega `climatology` a `radiation.json`: medias horarias de RAD agrupadas por día del año y hora, con media, mínimo y máximo entre todos los años (2012–2026), y el rango histórico de medias horarias (126–7.826 µGy/día). El paquete se reconstruyó completo; `radiation.json` pasó a 490 KB.
+- **Tarjeta RADIATION (3D):** media, mínimo y máximo del día de hoy en las 3 horas alrededor de la hora simulada, más el valor "ahora" del robot. **Simplificación declarada:** las horas de RAD son UTC, no hora local de Marte, así que "la misma hora" es una aproximación; el día es el del calendario terrestre del navegador.
+- **Panel de simulación:** las condiciones se fijan a mano y no son datos de sensores; el panel lo dice. En la interfaz se usa "simulated", no "real-time". Los límites de oxígeno (20 %), CO₂ (7,6 mmHg) y presión del traje (25 kPa) son **supuestos ilustrativos sin fuente verificada**. La presión atmosférica alerta fuera del rango medido por REMS en los soles del paquete; la radiación, sobre el umbral del paquete (3 × referencia); la hora, fuera de la ventana de la EVA.
+- **Voz:** API de voz del navegador, solo con voces instaladas en el equipo, para no hacer pedidos externos. Si no hay ninguna, suena solo el tono.
+- En la vista 3D vuelven las tarjetas TERRAIN y WINDOW, iguales a las del radar.
+**Impacto:**
+- Rol 3: revisar los tres límites del traje y conseguir fuente, o dejarlos rotulados como ilustrativos.
+- La alerta de radiación compara contra 3 × la referencia (557 µGy/día), no contra el máximo histórico de ese día (≈ 310). Si se prefiere lo segundo, es un cambio de una línea.
+- No se corrió `pytest` (falta en este Python) después de tocar `environment.py` y `build.py`; el build terminó con "package OK".
+- El audio no se pudo escuchar en la prueba automática.

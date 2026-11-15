@@ -70,3 +70,21 @@ different azimuths: 11 named waypoints from Darwin Outcrop to Hematite Hotspot +
 - Some images show the rover deck (camera looking back): pick the best ones per stop.
 - No horizon-pointing images were found for Bradbury Landing, Rocknest and Glenelg (outside the main site).
 - Credit: **NASA/JPL-Caltech**.
+
+## Processed package — `data/processed/gale_radar/` (branch `plan2d`)
+
+Built from the files above with `python scripts/build_package.py configs/packages/gale_radar.yaml` (~15 s). It is
+committed to Git (13 MB) so the viewer runs without rebuilding. Uses only `gale/dem/dem_detail.*`,
+`gale/imagery/hirise_mosaic_detail.*`, `gale/vector/curiosity_waypoints.geojson`, `gale/vector/msl_waypoints_jpl.geojson`,
+`photos/`, `rad/` and `rems/`.
+
+| Folder | Content |
+|---|---|
+| `terrain/` | Hillshade, HiRISE copy, slope (deg), red hazard mask (> 20°) at 2 m; elevation (uint16) and return time to the pickup (min) at 4 m |
+| `route/` | Modelled route through the stops (points with time, distance, slope; KPIs; validation) and Curiosity's track |
+| `science/` | 9 named stops with role, timing, photos (`photos/`, downsized, credit NASA/JPL-Caltech) |
+| `environment/` | RAD summary (reference rate, gaps, 2024-05-20 event, illustrative budget) and REMS hourly cycles of 8 sols |
+| `site.json` | Grids, layers (encoding, units, source, derivation), scenario, assumptions, warnings, sources |
+| `preview.png` | Sanity-check image of the layers |
+
+Format details for the viewer: [`web/README.md`](../web/README.md).
