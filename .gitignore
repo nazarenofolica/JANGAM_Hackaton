@@ -21,3 +21,9 @@ data/raw/MANIFEST.lock
 # Salidas temporales
 *.tmp
 *.log
+
+# Documentación interna: no se publica en la entrega
+documentos/
+.pytest_cache/
+*.md
+!README.md
