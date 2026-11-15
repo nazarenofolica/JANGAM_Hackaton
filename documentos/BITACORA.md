@@ -128,3 +128,26 @@ El plan pasó por 3 versiones, revisadas por un subagente (Claude Opus) en dos r
 **Pendiente:** la interfaz three.js la genera Fable a partir de `web/README.md` y `PLAN.md` §6.
 **Detalle técnico:** la grilla de ruteo de 4 m conserva el bbox del DEM con borde replicado, así que sus celdas miden 3,98 × 4,00 m. El error de posición es menor a 2 m en el borde S/E.
 **Impacto:** roles 2 y 3 revisan los supuestos del YAML y los paneles; rol 5 elige fotos; rol 6 escribe `science_notes` en el YAML.
+
+---
+
+## Domingo 15/11 00:25 — Visor del radar (bloques A y B) y tres ítems adelantados del bloque C
+
+**Quién:** Agus (pedido) + Fable (interfaz)
+**Qué decía el plan:** el anillo ámbar de retorno es una capa del radar (§6); la vista *Overview*, el panel ⓘ y las flechas de borde son del bloque C.
+**Qué pasó:**
+- **El anillo ámbar nunca entra en el radar con el escenario actual.** El tiempo de retorno más alto de toda el área es de 160 min, así que mientras queden más de 160 min de EVA (hasta t ≈ 200 min) no hay ninguna celda fuera del rango de retorno y el anillo no existe. Después aparece, pero siempre a más de 2 km del astronauta (2,44 km en t = 262; 2,02 km al final), porque el margen mínimo es de 77 min. El alcance máximo del radar es 1 km.
+- `return_time_4m.png` guarda minutos pares (2 × valor). El contorno se dibuja en un nivel impar para que caiga entre dos valores de celda; por eso el anillo avanza en saltos de 2 min de simulación (unos 80 m).
+- La advertencia de `site.json` "All environmental data are historical observations, not live or forecast values." contiene la palabra "live", que §7 prohíbe. El visor la muestra tal cual en el panel ⓘ porque `data/processed/` no se edita a mano.
+
+**Decisión:**
+- El anillo se implementó como dice `web/README.md` (shader sobre `return_time`, con un velo ámbar tenue fuera del rango). Se agregó en el radar el recuadro *Return limit*, que dice si el anillo todavía no existe o a qué distancia está.
+- Se adelantaron del bloque C la vista *Overview* (única vista donde se ve el anillo), el panel ⓘ (§7 pide que el supuesto de velocidad se diga en la interfaz) y las flechas de borde (a 250 m casi todas las paradas quedan fuera del alcance).
+- Etiquetas de parada en el radar: distancia en **línea recta**, que coincide con los anillos de distancia. La distancia **por la ruta** va en la tarjeta *Next stop*.
+- *Replay 2024-05-20*: el pico horario del evento se ubica 2 h después del inicio de la EVA (supuesto del replay, dicho en el tooltip). Entre horas se interpola linealmente.
+- Parámetros de URL para la demo y las pruebas: `t`, `play`, `speed`, `range`, `view`, `replay`, `sol`, `panel=info` (documentados en `web/README.md`).
+
+**Impacto:**
+- Roles 2 y 3: decidir si el anillo tiene que verse en el radar. Opciones: bajar el presupuesto de EVA en el YAML (con 6 h sobran 77 min), agregar un alcance mayor, o dejarlo como capa de *Overview*.
+- Quien mantiene el pipeline: cambiar el texto de esa advertencia en el origen y reconstruir el paquete, o aceptar la negación "not live".
+- No se corrió `python -m pytest -q` en esta sesión: el Python de esta máquina no tiene `pytest` instalado y no se tocó código Python.

@@ -3,8 +3,25 @@
 Static tactical-tablet viewer for a **simulated** Marswalk at Gale Crater. It reads only the package in
 `data/processed/gale_radar/` (no external requests, no backend) and runs from any static server.
 
-> Status: **the viewer is not built yet.** Everything it needs is ready: the data package, three.js (vendored)
-> and this contract. The screen spec is in `documentos/PLAN.md` §6 (Spanish); the essentials are repeated below.
+> Status: **radar built** (`index.html`, `style.css`, `main.js`): terrain shader with the red slope mask and the amber
+> return isochrone, modelled route, Curiosity track, stops, simulation clock, the three cards, the timeline, the
+> Overview and the Assumptions & sources panel. The screen spec is in `documentos/PLAN.md` §6 (Spanish).
+
+## URL parameters (demo and testing)
+
+| Parameter | Values | Default |
+|---|---|---|
+| `t` | EVA minute to start at | `0` |
+| `play` | `0` starts paused | playing |
+| `speed` | `30`, `60`, `300` | `60` |
+| `range` | `250`, `500`, `1000` (m) | `250` |
+| `view` | `radar`, `overview` | `radar` |
+| `replay` | `1` turns on the 2024-05-20 RAD replay | off |
+| `sol` | a REMS sol from `weather.json` | first sol |
+| `panel` | `info` opens Assumptions & sources | closed |
+
+Example: `http://localhost:8000/web/?t=262&play=0&view=overview` shows the amber return limit.
+Keyboard: space plays or pauses, Esc closes a panel.
 
 ## Run locally
 
