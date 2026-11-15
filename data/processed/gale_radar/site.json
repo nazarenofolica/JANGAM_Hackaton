@@ -2,7 +2,7 @@
  "schema_version": "radar-1.0",
  "id": "gale_radar",
  "name": "Marswalk Radar — Gale Crater: Pahrump Hills to Hematite Hotspot",
- "generated_utc": "2026-11-15T02:59:47Z",
+ "generated_utc": "2026-11-15T21:07:29Z",
  "crs": {
   "body": "Mars",
   "model": "sphere r = 3389.5 km",
@@ -133,6 +133,7 @@
   "dwell_min_per_stop": 20,
   "eva_duration_h": 6.0,
   "start_lmst": "10:00",
+  "robot_speed_kmh": 1.0,
   "hazard_slope_deg": 20
  },
  "assumptions": [
@@ -140,7 +141,8 @@
   "Cells steeper than 20 deg are not walkable (hard limit).",
   "20 min at each science stop; EVA budget 6.0 h; crew of 2; pressurized rover pickup at Hematite Hotspot.",
   "Astronaut position in the viewer is simulated along the modelled route (in a real EVA it would come from inertial/visual odometry).",
-  "Radiation alert at 3 x the reference rate is illustrative."
+  "Radiation alert at 3 x the reference rate is illustrative.",
+  "Scout robot: drives the modelled route ahead of the crew at 1.0 km/h, assumed for known terrain (Curiosity's top speed is about 0.15 km/h)."
  ],
  "warnings": [
   "All environmental data are historical observations, not live or forecast values.",

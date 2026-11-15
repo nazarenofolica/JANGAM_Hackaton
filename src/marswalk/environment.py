@@ -55,6 +55,15 @@ def radiation_summary(rad: pd.DataFrame, window_days: int, eva_hours: float, ale
     worst_end = roll.idxmax()
     eva_days = eva_hours / 24.0
 
+    # climatology: hourly means grouped by calendar day (MM-DD) and UTC hour, over every year with data
+    hourly_all = r.resample("1h").mean().dropna()
+    clim = hourly_all.groupby([hourly_all.index.strftime("%m-%d"), hourly_all.index.hour]).agg(["mean", "min", "max", "count"])
+    by_day: dict = {}
+    for (day, hour), row in clim.iterrows():
+        d = by_day.setdefault(day, {k: [None] * 24 for k in ("mean", "min", "max", "n")})
+        d["mean"][hour], d["min"][hour], d["max"][hour] = (round(float(row[k]), 1) for k in ("mean", "min", "max"))
+        d["n"][hour] = int(row["count"])
+
     return {
         "source": "NASA PDS / SPDF CDAWeb, MSL_RAD_OBS-L2, variable DOSIMETRY_TOTAL_f (quality filtered)",
         "quantity": "Absorbed dose rate in tissue-equivalent plastic (detector E), TOTAL_DOSE_E",
@@ -77,6 +86,13 @@ def radiation_summary(rad: pd.DataFrame, window_days: int, eva_hours: float, ale
         "actual_astronaut_exposure": "not modelled",
         "alert": {"factor": alert_factor, "threshold": round(ref * alert_factor, 1),
                   "label": "Illustrative alert (assumption): rate above %g x reference" % alert_factor},
+        "climatology": {
+            "label": "Hourly mean dose rate by calendar day and UTC hour, over all years with data (historical).",
+            "hour_axis": "UTC (RAD timestamps; not Mars local time)",
+            "years": [int(hourly_all.index.year.min()), int(hourly_all.index.year.max())],
+            "hourly_range": {"min": round(float(hourly_all.min()), 1), "max": round(float(hourly_all.max()), 1)},
+            "by_day": by_day,
+        },
         "solar_event": {
             "date": event_date,
             "label": "Historical scenario: what RAD measured during the %s solar particle event. Not a prediction." % event_date,

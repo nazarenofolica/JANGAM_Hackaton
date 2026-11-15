@@ -2,7 +2,7 @@
 
 **Para toda sesión de Claude o Fable:** leer este archivo y [`PLAN.md`](PLAN.md) antes de tocar nada. Trabajar el primer ítem sin tildar del primer bloque incompleto. Al terminar un ítem, tildarlo y anotar al lado la fecha, la hora y cómo se verificó. No tildar nada sin verificar. Todo desvío del plan va a [`BITACORA.md`](BITACORA.md). **No hacer commit ni push sin autorización explícita.**
 
-**Última actualización:** dom 15/11 02:00 — bloques 0, A y B completos (interfaz generada con Fable); del bloque C quedan hechos *Overview*, panel ⓘ y flechas de borde. Se agregó el **bloque C3D** (tercera vista *3D*, pedida por el equipo; desvío anotado en BITACORA), completo. Sigue el resto del bloque C.
+**Última actualización:** dom 15/11 18:20 — bloque S ampliado: robot a 1 km/h, y en la vista 3D visor, tarjetas, radiación y panel de simulación con alertas habladas. Ver BITACORA 15/11 18:20.
 
 ## Hecho (bloque 0)
 - [x] Datos descargados, catalogados y auditados (14/11). Detalle en `data/README.md` y `MANIFEST.json`.
@@ -55,6 +55,19 @@ Condición de salida: se camina la ruta en 3D con un HUD que respeta §7 y las o
 - [x] Ficha de parada: barra de aproximación en los últimos 150 m y, al llegar, foto Navcam con crédito y objetivo; la foto se agranda con el visor existente (15/11 02:00). Verificado por captura en Murray Buttes, Vera Rubin Ridge y Hematite Hotspot.
 - [x] Mini radar en la esquina, cinta de brújula, leyenda de capas con la aclaración del tinte y de la escala, velocidad ×10 (15/11 02:00). Verificado por captura; *Radar* y *Overview* se ven igual que antes al volver.
 - [x] Rendimiento y accesibilidad: niveles de detalle del relieve por distancia, HUD a ~10 Hz, `prefers-reduced-motion` (15/11 02:00). Verificado: GPU integrada Intel UHD, 1366×768, 45–50 cuadros por segundo (antes de optimizar, ~31 reproduciendo). Con movimiento reducido emulado (1024×768) carga sin errores y el pulso no se dibuja; la entrada de cámara y la caminata se apagan con la misma condición en el código, pero no se miraron en movimiento. Probado también a 1920×1080.
+
+## Bloque S — POC simplificado (pedido del equipo, 15/11 17:20; ver BITACORA)
+Condición de salida: dos entidades, radar a pantalla completa con dos tarjetas, paradas clickeables y 3D en primera persona sin datos.
+- [x] Dos entidades sobre la misma ruta: robot explorador que sale 60 min antes y tripulación que sale después (15/11 17:20). Verificado por CDP en Chrome headless a 1366×768: en T−00:55 la tripulación sigue en Pahrump Hills y el robot está a 158 m; en t = 100 el robot está a 1,13 km; la línea de tiempo arranca en −01:00.
+- [x] Radar a pantalla completa con *Layers*, tarjeta TERRAIN y tarjeta WINDOW; sin REMS, sin RAD, sin tarjeta 3 y sin textos explicativos (15/11 17:20). Verificado por captura en *Radar* (250 m y 500 m) y *Overview*.
+- [x] Paradas clickeables en el mapa: ventana con distancia por la ruta, ETA, Δz y foto Navcam con crédito, que se agranda (15/11 17:20). Verificado por CDP: clic en Murray Buttes abre la ventana (473 m, 13 min, +13 m) y la foto se agranda con crédito NASA/JPL-Caltech; ya visitada muestra "visited" y la hora de salida.
+- [x] Vista 3D en primera persona, sin HUD ni datos (15/11 17:20). Verificado por captura en T−00:59 (se ve el robot adelante con su columna azul) y en t = 205; 0 mensajes de consola y 21 pedidos, todos dentro del repo.
+- [x] Robot a 1 km/h (supuesto en el YAML) con salida calculada para ir siempre al menos 500 m adelante: sale 90 min antes (15/11 18:20). Verificado por CDP: en t = 0 está a 1,38 km; la distancia mínima en línea recta es 461 m (t = 246, con el robot ya en el punto de recogida).
+- [x] Pipeline: `radiation.json › climatology` (media, mínimo y máximo horarios por día del año y hora UTC, 2012–2026) y supuesto del robot en `site.json`; paquete reconstruido con `build_package.py` (15/11 18:07, "package OK"). Verificado: 366 días; para el 15/11 da media ≈ 245, mínimo ≈ 150 y máximo ≈ 312 µGy/día con 12 años.
+- [x] Vista 3D: marco de visor, tarjetas TERRAIN y WINDOW iguales a las del radar y tarjeta RADIATION (ahora, media, mínimo, máximo) (15/11 18:20). Verificado por captura y por CDP: los números de las tarjetas coinciden con los del radar en t = 100.
+- [x] Panel de simulación con 6 condiciones y alertas (cartel rojo, tono y voz) (15/11 18:20). Verificado por CDP: oxígeno en 15 % muestra "OXYGEN LOW" y manda a la voz "Warning. Oxygen low. 15 percent."; radiación en 3.429 y hora 17:00 disparan sus alertas; *Reset* las borra; 0 pedidos fuera del repo. **El sonido no se escuchó**: Chrome headless no reproduce audio.
+- [ ] Pasada de una persona en un navegador real: escuchar el tono y la voz, arrastre para mirar en 3D, clic en paradas con el dedo.
+- [ ] `python -m pytest -q` (no se pudo correr: este Python no tiene `pytest`; se tocaron `environment.py` y `build.py`).
 
 ## Bloque D — Cierre · **congelar código dom 17:00**
 - [ ] Revisión final de `PLAN.md` §10, pregunta por pregunta.

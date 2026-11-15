@@ -3,59 +3,64 @@
 Static tactical-tablet viewer for a **simulated** Marswalk at Gale Crater. It reads only the package in
 `data/processed/gale_radar/` (no external requests, no backend) and runs from any static server.
 
-> Status: **radar built** (`index.html`, `style.css`, `main.js`): terrain shader with the red slope mask and the amber
-> return isochrone, modelled route, Curiosity track, stops, simulation clock, the three cards, the timeline, the
-> Overview and the Assumptions & sources panel. The screen spec is in `documentos/PLAN.md` §6 (Spanish).
-> A third view, **3D** (`view3d.js`), was added on Nov 15: see "3D walk view" below.
+> Status: **simplified POC** (`index.html`, `style.css`, `main.js`, `view3d.js`). Two entities move along the
+> modelled route: a **scout robot** and the **crew** behind it. Three views share one mission clock:
+>
+> - **Radar** (full screen, crew at the centre, heading up) and **Overview** (whole area, north up): Layers legend,
+>   a TERRAIN card (slope, max slope in the next 200 m, elevation) and a WINDOW card (elapsed, remaining, return
+>   margin). Each stop marker opens a pop-up with distance by route, ETA, Δz and the Navcam photo.
+> - **3D**: first person through a helmet visor, with the same TERRAIN and WINDOW cards, a RADIATION card and a
+>   simulation panel that triggers spoken alerts.
+
+## Scout robot
+
+- Speed: `scenario.robot_speed_kmh` in the YAML (1 km/h, an assumption for known terrain; Curiosity's top speed is
+  about 0.15 km/h). Constant along the route, no time at the stops.
+- Departure: computed in `main.js` so that the robot stays at least 500 m ahead of the crew (`ROBOT_MIN_GAP_M`) on
+  the whole route, rounded up to 10 min. With the default scenario it leaves **90 min** before the crew.
+- Role: it is the source of the "now" conditions shown to the crew. In this POC those values are set by hand.
+
+## 3D view (`view3d.js` + HTML overlay)
+
+Built the first time the **3D** button is used (it loads `terrain/elevation_4m.u16` and `terrain/hirise.png`).
+Terrain mesh from `elevation` (4 m grid, vertical scale 1:1) in 64 × 64 cell tiles with four levels of detail by
+distance. The surface colour is a stylised tint of the grayscale `hirise` image, not measured colour, and the
+lighting does not follow the time of day. At 4 m per cell the ground next to the camera looks smooth.
+
+- **Visor:** CSS frame over the canvas (rounded glass, nose bridge, faint glare, centre mark).
+- **RADIATION card:** `Avg`, `Min` and `Max` come from `radiation.json › climatology`: hourly mean dose rates of
+  today's calendar day over every year of RAD data (2012–2026), in the three hours around the simulated time of
+  day. RAD timestamps are **UTC**, not Mars local time, so the hour match is a simplification. `Now · robot` is the
+  value set in the simulation panel (it follows `Avg` until it is moved).
+- **Simulation panel** (button *Simulation*): six conditions set by hand. Crossing a limit shows a red chip and
+  plays a chime plus a spoken message (Web Speech API, only with a voice installed on the device, so no request
+  leaves the page). Limits are illustrative assumptions of the viewer unless noted:
+
+| Condition | Range | Alert |
+|---|---|---|
+| Oxygen | 0–100 % | below 20 % |
+| CO₂ | 0–15 mmHg | above 7.6 mmHg |
+| Suit pressure | 0–40 kPa (default 29.6) | below 25 kPa |
+| Atmospheric pressure | 550–1050 Pa | outside the range REMS measured in the package sols (690–945 Pa) |
+| Radiation | lowest to highest hourly mean RAD ever measured (126–7826 µGy/day, log scale) | above `radiation.json › alert.threshold` (3 × reference) |
+| Time of day | 00:00–23:45 LMST (follows the clock until it is moved) | outside `weather.json › eva_window_lmst` |
+
+The interface says "simulated", never "real-time" or "live" (`PLAN.md` §7).
 
 ## URL parameters (demo and testing)
 
 | Parameter | Values | Default |
 |---|---|---|
-| `t` | EVA minute to start at | `0` |
+| `t` | mission minute to start at; the crew leaves at `0`, the robot at `-90` | `-90` |
 | `play` | `0` starts paused | playing |
 | `speed` | `10`, `30`, `60`, `300` | `60` |
-| `range` | `250`, `500`, `1000` (m) | `250` |
+| `range` | `250`, `500`, `1000` (m, centre to the top edge) | `250` |
 | `view` | `radar`, `overview`, `3d` | `radar` |
-| `cam` | `close`, `follow`, `high` (3D view only) | `follow` |
-| `replay` | `1` turns on the 2024-05-20 RAD replay | off |
-| `sol` | a REMS sol from `weather.json` | first sol |
 | `panel` | `info` opens Assumptions & sources | closed |
 
 Example: `http://localhost:8000/web/?t=262&play=0&view=overview` shows the amber return limit.
-3D examples: `?view=3d&t=118&play=0&replay=1` (illustrative RAD alert at a stop), `?view=3d&t=205&speed=10` (walking).
-Keyboard: space plays or pauses, Esc closes a panel.
-
-## 3D walk view (`view3d.js`)
-
-A chase camera follows the simulated astronaut over the terrain, with a visor-style HUD. It is built the first time
-the **3D** button is used (it loads `terrain/elevation_4m.u16` and `terrain/hirise.png`), so the radar start-up is
-not slower. Same package, same simulation clock, same rules for wording.
-
-- **Terrain:** mesh from `elevation` (4 m grid, **vertical scale 1:1**), in 64 × 64 cell tiles with four levels of
-  detail by distance (every 1, 2, 4 or 8 cells) and skirts that hide the seams. Shaded with normals from the DEM and
-  the `hillshade` layer; coloured with a **stylised tint** of the grayscale `hirise` image (not measured colour; the
-  lighting does not follow the time of day). Both facts are stated in the Layers legend.
-- **Anchored to the terrain (spatial data):** red `hazard` mask, contour lines every 10 m (bold every 50 m), a 10 m
-  north-aligned grid around the astronaut, the modelled route, Curiosity's track, a light column and a ring at each
-  stop, the amber return limit, and two callouts: the nearest cell above the slope limit (within 120 m) and the
-  nearest point of Curiosity's track (within 80 m, with its sol).
-- **In the HUD (time series, not tied to a spot):** radiation dial (log scale, reference and alert marks, the three
-  RAD labels), temperature dial (ground and air, REMS sol selector), UV, pressure, humidity, wind "not available",
-  EVA time dial with the estimated arrival mark, return margin, slope here and ahead, elevation.
-- **Appears as the walk advances:** the EVA log (top left) is a list of events computed once from the package and
-  shown by EVA time, so scrubbing the timeline works: stop approach, arrival and departure, steep sections (slope
-  above 75 % of the limit), crossings of Curiosity's track, every 100 m climbed, each LMST hour of REMS, half of the
-  EVA budget, the moment the return limit exists, and the RAD replay crossings and peak. A new entry flashes the
-  instrument it refers to. The next-stop card fills an approach bar over the last 150 m and opens the site record
-  (Navcam photo with credit, objective) on arrival.
-- **Camera:** presets Close / Follow / High; drag to look around, scroll or pinch to zoom, double-click to recentre.
-  The compass tape shows the view bearing, with marks for the walking direction, the next stop and the pickup.
-- **Radar:** stays on screen as a corner instrument (150 px, heading up).
-- **Motion:** with `prefers-reduced-motion` the scan pulse, the camera drop-in, the walking animation and the entry
-  animations are off.
-- **Performance:** measured on an integrated Intel UHD GPU at 1366 × 768: about 45–50 frames per second. The scene
-  follows the clock every frame; the radar, the cards and the HUD numbers refresh about 10 times per second.
+Keyboard: space plays or pauses, Esc closes a panel or the stop pop-up. In 3D, drag to look around and double-click
+to face the route again.
 
 ## Run locally
 
@@ -118,7 +123,8 @@ Start from `site.json`: it lists every layer and file with its encoding, units, 
 - `science/stops.json` — 9 named stops. `role`: `start | science | pickup | context`; `visited`, `order`,
   `x, y, z`, `arrive_t_min`, `depart_t_min`, `dist_m` (along the route), `photos[]` (`file`, `sol`, `date_utc`,
   `credit`), `science_note` (**empty until the team writes it** → show "Objective: pending").
-- `environment/radiation.json` — RAD: `reference.value` (µGy/day, with dates), `illustrative_budget`, `alert`
+- `environment/radiation.json` — RAD: `climatology` (hourly means by calendar day `MM-DD` and UTC hour over all
+  years: `by_day[day].mean|min|max|n[hour]`, plus `hourly_range`), `reference.value` (µGy/day, with dates), `illustrative_budget`, `alert`
   (threshold), `annual_median`, `monthly_median[]`, `gaps[]`, `solar_event` (`hourly[]` for the 2024-05-20 replay,
   `baseline_before`, `peak_value`, `worst_eva_window`).
 - `environment/weather.json` — REMS: 8 sols, each with `hourly[]` (`hour` LMST, `air_c`, `ground_c`,

@@ -17,172 +17,112 @@
     <div class="brand">
       <span class="brand-name">MARSWALK RADAR</span>
       <span class="brand-site">Gale Crater</span>
-      <span class="chip chip-sim" title="The astronaut position is simulated along the modelled route. No sensor feed.">SIMULATED EVA</span>
+      <span class="chip chip-sim">SIMULATED EVA</span>
     </div>
     <div class="clock">
       <span class="clock-item"><span class="k">LMST</span> <span class="num" id="hdr-lmst">--:--</span></span>
-      <span class="clock-item"><span class="k">EVA</span> <span class="num" id="hdr-eva">--:-- / --:--</span></span>
+      <span class="clock-item"><span class="k">EVA</span> <span class="num" id="hdr-eva">--:--</span></span>
       <button id="btn-info" class="icon-btn" title="Assumptions &amp; sources" aria-label="Assumptions and sources">i</button>
     </div>
   </header>
 
   <main id="main">
     <section id="radar-area">
-      <div id="alert-banner" hidden></div>
 
-      <aside id="legend">
+      <section id="view3d" hidden aria-label="First-person view">
+        <canvas id="v3-canvas"></canvas>
+        <div id="v3-visor" aria-hidden="true"><i id="v3-reticle"></i></div>
+        <div id="v3-loading">Loading terrain…</div>
+      </section>
+
+      <div id="stage">
+        <canvas id="radar-canvas"></canvas>
+        <svg id="rings" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+        <div id="edge-arrows"></div>
+        <div id="markers"></div>
+      </div>
+
+      <div id="north" class="only-2d" aria-hidden="true"><div id="north-needle"><span>N</span></div></div>
+
+      <aside id="legend" class="only-2d">
         <div class="legend-title">Layers</div>
-        <div class="lg"><span class="sw sw-you"></span><span>Astronaut <em>simulated position</em></span></div>
-        <div class="lg"><span class="sw sw-route"></span><span>Modelled route <em>estimated</em></span></div>
-        <div class="lg"><span class="sw sw-done"></span><span>Route already walked</span></div>
-        <div class="lg"><span class="sw sw-hazard"></span><span>Slope &gt; <span id="lg-slope">20</span>° <em>derived, HiRISE DEM</em></span></div>
-        <div class="lg"><span class="sw sw-ring"></span><span>Return limit <em>derived isochrone</em></span></div>
-        <label class="lg lg-toggle"><span class="sw sw-rover"></span><span>Curiosity track <em>historical reference</em></span>
+        <div class="lg"><span class="sw sw-you"></span><span>Crew</span></div>
+        <div class="lg"><span class="dot dot-robot"></span><span>Scout robot</span></div>
+        <div class="lg"><span class="sw sw-route"></span><span>Modelled route</span></div>
+        <div class="lg"><span class="sw sw-done"></span><span>Route walked</span></div>
+        <div class="lg"><span class="sw sw-hazard"></span><span>Slope &gt; <span id="lg-slope">20</span>°</span></div>
+        <div class="lg"><span class="sw sw-ring"></span><span>Return limit</span></div>
+        <label class="lg lg-toggle"><span class="sw sw-rover"></span><span>Curiosity track</span>
           <input type="checkbox" id="chk-rover" checked></label>
         <div class="legend-title">Stops</div>
         <div class="lg"><span class="dot dot-next"></span><span>Upcoming</span></div>
         <div class="lg"><span class="dot dot-visited"></span><span>Visited</span></div>
-        <div class="lg"><span class="dot dot-pickup"></span><span>Rover pickup</span></div>
-        <div class="lg"><span class="dot dot-context"></span><span>Not on this route</span></div>
-        <div class="legend-note">Stop labels: straight-line distance · Δz from here. Relief does not resolve obstacles under ~4–6 m.</div>
-        <div class="only-3d">
-          <div class="legend-title">3D view</div>
-          <div class="lg"><span class="sw sw-contour"></span><span>Contour lines <em>every 10 m, bold every 50 m</em></span></div>
-          <div class="lg"><span class="sw sw-grid"></span><span>Ground grid <em>10 m cells, north aligned</em></span></div>
-          <div class="lg"><span class="sw sw-beam"></span><span>Stop beacon <em>light column, 90 m tall</em></span></div>
-          <div class="legend-note">Vertical scale 1:1 (HiRISE DEM at 4 m). Surface colour is a stylised tint of the grayscale HiRISE image, not measured colour, and the lighting does not follow the time of day. Two figures: crew of 2 (assumed).</div>
-        </div>
+        <div class="lg"><span class="dot dot-pickup"></span><span>Pickup</span></div>
+        <div class="lg"><span class="dot dot-context"></span><span>Off route</span></div>
       </aside>
 
-      <section id="view3d" hidden aria-label="3D walk view">
-        <canvas id="v3-canvas"></canvas>
-        <div id="v3-vignette"></div>
-        <div id="v3-labels"></div>
-
-        <div id="v3-compass" aria-hidden="true">
-          <div id="v3-tape-clip">
-            <div id="v3-tape-mask"><div id="v3-tape"></div></div>
-            <div id="v3-pips"><div class="v3-pip walk" id="v3-walk-pip" title="Walking direction"><i></i></div></div>
+      <aside id="cards">
+        <article class="card">
+          <h2>TERRAIN</h2>
+          <div class="metrics">
+            <div class="metric"><span class="k">Slope</span><span class="v num" id="tr-slope">–</span></div>
+            <div class="metric"><span class="k">Max 200 m</span><span class="v num" id="tr-ahead">–</span></div>
+            <div class="metric"><span class="k">Elevation</span><span class="v num" id="tr-elev">–</span></div>
           </div>
-          <div id="v3-caret"></div>
-          <div id="v3-bearing"><span class="num" id="v3-bearing-v">000°</span><span class="k">view bearing</span></div>
-        </div>
-
-        <div id="v3-feed" aria-label="EVA log"></div>
-
-        <div id="v3-env" class="v3-cluster">
-          <div class="v3-gauges">
-            <div class="v3-gauge" id="v3-rad">
-              <svg viewBox="-6 -6 132 132" aria-hidden="true">
-                <path class="trk" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
-                <path class="val" id="v3-rad-arc" pathLength="100" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
-                <g id="v3-rad-ticks"></g>
-              </svg>
-              <div class="v3-gauge-c"><span class="k">Radiation</span><span class="v num" id="v3-rad-v">–</span><span class="u">µGy/day</span></div>
-              <span class="v3-gauge-foot">log scale</span>
-            </div>
-            <div class="v3-gauge" id="v3-temp">
-              <svg viewBox="-6 -6 132 132" aria-hidden="true">
-                <path class="trk" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
-                <path class="trk in" d="M 31.01 88.99 A 41 41 0 1 1 88.99 88.99"/>
-                <path class="val ground" id="v3-tg-arc" pathLength="100" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
-                <path class="val air in" id="v3-ta-arc" pathLength="100" d="M 31.01 88.99 A 41 41 0 1 1 88.99 88.99"/>
-                <g id="v3-temp-ticks"></g>
-              </svg>
-              <div class="v3-gauge-c"><span class="k">Ground</span><span class="v num" id="v3-ground-v">–</span><span class="u air num" id="v3-air-v">air –</span></div>
-              <span class="v3-gauge-foot">°C</span>
-            </div>
-            <dl class="v3-side">
-              <div><dt>UV</dt><dd class="num" id="v3-uv">–</dd></div>
-              <div><dt>Pressure</dt><dd class="num" id="v3-press">–</dd></div>
-              <div><dt>Humidity</dt><dd class="num" id="v3-rh">–</dd></div>
-              <div><dt>Wind</dt><dd><em>not available</em></dd></div>
-              <div><dt>RAD scenario</dt><dd><button id="v3-replay" class="pill" aria-pressed="false" title="Run the RAD series of the 2024-05-20 solar particle event on the EVA clock (historical scenario, not a prediction)">Replay</button></dd></div>
-            </dl>
+          <div class="bar"><div class="bar-fill" id="tr-bar"></div><div class="bar-ahead" id="tr-bar-ahead"></div></div>
+        </article>
+        <article class="card">
+          <h2>WINDOW</h2>
+          <div class="metrics">
+            <div class="metric"><span class="k">Elapsed</span><span class="v num" id="wn-elapsed">–</span></div>
+            <div class="metric"><span class="k">Remaining</span><span class="v num" id="wn-remaining">–</span></div>
+            <div class="metric metric-margin"><span class="k">Return margin</span><span class="v num" id="wn-margin">–</span></div>
           </div>
-          <div class="v3-fine" id="v3-rad-src"></div>
-          <div class="v3-fine" id="v3-rad-budget"></div>
-          <div class="v3-fine"><b>Historical REMS observations at Gale Crater</b> · hourly medians · <select id="v3-sol" aria-label="REMS sol"></select></div>
-        </div>
+        </article>
+        <article class="card only-3d">
+          <h2>RADIATION <span class="unit">µGy/day</span></h2>
+          <div class="metrics metrics-4">
+            <div class="metric metric-now"><span class="k">Now · robot</span><span class="v num" id="rad-now">–</span></div>
+            <div class="metric"><span class="k">Avg</span><span class="v num" id="rad-avg">–</span></div>
+            <div class="metric"><span class="k">Min</span><span class="v num" id="rad-min">–</span></div>
+            <div class="metric"><span class="k">Max</span><span class="v num" id="rad-max">–</span></div>
+          </div>
+          <div class="k card-foot" id="rad-win"></div>
+        </article>
+      </aside>
 
-        <div id="v3-eva" class="v3-cluster">
-          <div class="v3-gauges">
-            <dl class="v3-side v3-terrain" id="v3-terrain">
-              <div><dt>Slope here</dt><dd class="num" id="v3-slope-v">–</dd></div>
-              <div class="v3-bar" title="Slope here against the walkable limit; the mark is the steepest slope in the next 200 m"><i id="v3-slope-bar"></i><b id="v3-slope-ahead"></b></div>
-              <div><dt>Max next 200 m</dt><dd class="num" id="v3-ahead-v">–</dd></div>
-              <div><dt>Elevation</dt><dd class="num" id="v3-elev-v">–</dd></div>
-              <div class="v3-sub num" id="v3-climb-v"></div>
-            </dl>
-            <div class="v3-gauge" id="v3-time">
-              <svg viewBox="-6 -6 132 132" aria-hidden="true">
-                <path class="trk" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
-                <path class="val" id="v3-eva-arc" pathLength="100" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
-                <g id="v3-eva-ticks"></g>
-              </svg>
-              <div class="v3-gauge-c"><span class="k">EVA time left</span><span class="v num" id="v3-left-v">–</span><span class="u">h:min of budget</span></div>
-              <span class="v3-gauge-foot">amber mark: est. arrival</span>
-            </div>
-            <div class="v3-margin" id="v3-margin">
-              <span class="k">Return margin</span>
-              <span class="v num" id="v3-margin-v">–</span>
-              <span class="v3-sub" id="v3-back-v"></span>
-            </div>
-          </div>
-          <div class="v3-fine" id="v3-terrain-note"></div>
-        </div>
-
-        <div id="v3-tg">
-          <div class="k" id="v3-tg-head">NEXT STOP</div>
-          <div class="v3-tg-name" id="v3-tg-name">–</div>
-          <div class="metrics metrics-tight">
-            <div class="metric"><span class="k">By route</span><span class="v num" id="v3-tg-dist">–</span></div>
-            <div class="metric"><span class="k" id="v3-tg-eta-k">ETA</span><span class="v num" id="v3-tg-eta">–</span></div>
-            <div class="metric"><span class="k">Δz</span><span class="v num" id="v3-tg-dz">–</span></div>
-          </div>
-          <div id="v3-tg-prog" hidden>
-            <div class="v3-bar"><i id="v3-tg-bar"></i></div>
-            <div class="v3-fine">Site record opens on arrival · approach <span class="num" id="v3-tg-prog-v">0 %</span></div>
-          </div>
-          <div id="v3-tg-rec" hidden>
-            <button id="v3-tg-photo-btn" class="photo-btn" title="Enlarge photo">
-              <img id="v3-tg-photo" alt="">
-              <span class="photo-credit" id="v3-tg-credit"></span>
-            </button>
-            <div class="v3-fine" id="v3-tg-note"></div>
+      <div id="sim" class="only-3d">
+        <button id="sim-toggle" class="pill" aria-expanded="false" aria-controls="sim-panel">Simulation ▾</button>
+        <div id="sim-panel" hidden>
+          <div class="sim-head">SIMULATION PANEL</div>
+          <div class="fine">Set conditions by hand to test the alerts. Simulated values, not sensor data.</div>
+          <div id="sim-rows"></div>
+          <div class="sim-foot">
+            <label><input type="checkbox" id="sim-sound" checked> Sound</label>
+            <button id="sim-reset" class="pill">Reset</button>
           </div>
         </div>
+      </div>
+      <div id="v3-alerts" class="only-3d" role="status" aria-live="assertive"></div>
 
-        <div id="v3-cam">
-          <div class="seg" id="seg-cam" role="group" aria-label="Camera">
-            <button data-cam="close">Close</button>
-            <button data-cam="follow">Follow</button>
-            <button data-cam="high">High</button>
+      <div id="stop-pop" class="only-2d" hidden>
+        <button class="pop-close" id="sp-close" aria-label="Close">×</button>
+        <div class="pop-name" id="sp-name"></div>
+        <div class="pop-body">
+          <button id="sp-photo-btn" class="photo-btn" title="Enlarge photo">
+            <img id="sp-photo" alt="">
+            <span class="photo-credit" id="sp-credit"></span>
+          </button>
+          <div class="pop-metrics">
+            <div class="metric"><span class="k" id="sp-k1"></span><span class="v num" id="sp-v1"></span></div>
+            <div class="metric"><span class="k" id="sp-k2"></span><span class="v num" id="sp-v2"></span></div>
+            <div class="metric"><span class="k">Δz</span><span class="v num" id="sp-v3"></span></div>
           </div>
-          <span class="v3-fine">Drag to look · scroll to zoom · double-click to recentre</span>
         </div>
-
-        <div id="v3-loading">Building the terrain from the HiRISE DEM…</div>
-      </section>
-
-      <div id="stage-wrap">
-        <div id="stage">
-          <canvas id="radar-canvas"></canvas>
-          <svg id="rings" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
-          <div id="markers"></div>
-        </div>
-        <div id="north-rot"><div id="north-badge"><span id="north-n">N</span></div></div>
-        <div id="edge-arrows"></div>
       </div>
 
-      <aside id="radar-side">
-        <div class="readout"><span class="k">HEADING</span><span class="num" id="rd-heading">---°</span></div>
-        <div class="readout"><span class="k">RANGE</span><span class="num" id="rd-range">--- m</span></div>
-        <div class="readout readout-ring"><span class="k">RETURN LIMIT</span><span id="rd-ring">—</span></div>
-      </aside>
-
       <div id="radar-controls">
-        <div class="seg" id="seg-range" role="group" aria-label="Radar range">
+        <div class="seg only-2d" id="seg-range" role="group" aria-label="Radar range">
           <button data-range="250">250 m</button>
           <button data-range="500">500 m</button>
           <button data-range="1000">1 km</button>
@@ -190,71 +130,9 @@
         <div class="seg" id="seg-view" role="group" aria-label="View">
           <button data-view="radar">Radar</button>
           <button data-view="overview">Overview</button>
-          <button data-view="3d" title="3D walk view: follow the simulated astronaut over the HiRISE terrain">3D</button>
+          <button data-view="3d">3D</button>
         </div>
-        <button id="btn-layers" class="pill only-3d" aria-pressed="false" title="Show or hide the layer legend">Layers</button>
       </div>
-    </section>
-
-    <section id="panel">
-      <article class="card" id="card-terrain">
-        <h2><span class="q">1</span> TERRAIN <span class="tag">derived · HiRISE DEM 2 m</span></h2>
-        <div class="metrics">
-          <div class="metric"><span class="k">Slope here</span><span class="v num" id="tr-slope">–</span></div>
-          <div class="metric"><span class="k">Max next 200 m</span><span class="v num" id="tr-ahead">–</span></div>
-          <div class="metric"><span class="k">Elevation</span><span class="v num" id="tr-elev">–</span></div>
-        </div>
-        <div class="bar" title="Slope here against the walkable limit"><div class="bar-fill" id="tr-bar"></div><div class="bar-ahead" id="tr-bar-ahead"></div></div>
-        <div class="fine" id="tr-note"></div>
-      </article>
-
-      <article class="card" id="card-window">
-        <h2><span class="q">2</span> WINDOW &amp; SAFETY</h2>
-        <div class="metrics">
-          <div class="metric"><span class="k">Elapsed</span><span class="v num" id="wn-elapsed">–</span></div>
-          <div class="metric"><span class="k">Remaining</span><span class="v num" id="wn-remaining">–</span></div>
-          <div class="metric metric-margin"><span class="k">Return margin</span><span class="v num" id="wn-margin">–</span></div>
-        </div>
-        <div class="fine" id="wn-margin-note"></div>
-
-        <div class="sub-head">
-          <span id="rems-label">Historical REMS observations at Gale Crater</span>
-          <select id="sel-sol" aria-label="REMS sol"></select>
-        </div>
-        <svg id="rems-chart" viewBox="0 0 360 70" preserveAspectRatio="none" role="img" aria-label="Historical air and ground temperature over the sol"></svg>
-        <div class="fine" id="rems-now"></div>
-
-        <div class="sub-head">
-          <span>Radiation · Curiosity RAD</span>
-          <button id="btn-replay" class="pill" aria-pressed="false">Replay 2024-05-20</button>
-        </div>
-        <div class="rad-row">
-          <div class="rad-rate"><span class="v num" id="rad-rate">–</span><span class="u">µGy/day</span></div>
-          <svg id="rad-chart" viewBox="0 0 200 40" preserveAspectRatio="none" role="img" aria-label="RAD dose rate over the EVA clock"></svg>
-        </div>
-        <div class="fine" id="rad-l1"></div>
-        <div class="fine" id="rad-l2"></div>
-        <div class="fine" id="rad-l3">Actual astronaut exposure: <b>not modelled</b>.</div>
-      </article>
-
-      <article class="card" id="card-stop">
-        <h2><span class="q">3</span> <span id="st-head">NEXT STOP</span></h2>
-        <div class="stop-body">
-          <button id="st-photo-btn" class="photo-btn" title="Enlarge photo">
-            <img id="st-photo" alt="">
-            <span class="photo-credit" id="st-credit"></span>
-          </button>
-          <div class="stop-info">
-            <div class="stop-name" id="st-name">–</div>
-            <div class="metrics metrics-tight">
-              <div class="metric"><span class="k">By route</span><span class="v num" id="st-dist">–</span></div>
-              <div class="metric"><span class="k" id="st-eta-k">ETA</span><span class="v num" id="st-eta">–</span></div>
-              <div class="metric"><span class="k">Δz</span><span class="v num" id="st-dz">–</span></div>
-            </div>
-            <div class="fine" id="st-note"></div>
-          </div>
-        </div>
-      </article>
     </section>
   </main>
 
@@ -270,7 +148,8 @@
       <div id="tl-track">
         <div id="tl-fill"></div>
         <div id="tl-marks"></div>
-        <div id="tl-thumb"></div>
+        <div id="tl-robot" title="Scout robot"></div>
+        <div id="tl-thumb" title="Crew"></div>
       </div>
       <input type="range" id="tl-input" min="0" max="1" step="0.01" value="0" aria-label="EVA timeline">
     </div>

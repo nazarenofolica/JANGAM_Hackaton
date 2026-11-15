@@ -176,3 +176,43 @@ El plan pasó por 3 versiones, revisadas por un subagente (Claude Opus) en dos r
 - **El pico del *Replay* en el registro** es el de la serie horaria (8.025 µGy/día), no el `peak_value` de 10 minutos (8.378): es la misma serie que ya usaba el radar.
 - **No se hizo:** vista en primera persona (a 4 m por celda el suelo cercano se ve borroso), exageración vertical, y hora del día en la iluminación (haría falta la posición del Sol; se prefirió decir que la luz es fija).
 - `python -m pytest -q`: 9 pasan (no se tocó código Python).
+
+---
+
+## Domingo 15/11 17:20 — POC simplificado: dos entidades, radar limpio y 3D en primera persona
+
+**Quién:** Agus (pedido) + Fable (interfaz)
+**Qué decía el plan:** §6 pide un panel de 3 tarjetas con REMS, RAD y *Replay*; el bloque C3D tenía una cámara de seguimiento con HUD.
+**Qué pasó:** el equipo pidió corregir y simplificar el POC: los datos en pantalla eran confusos y sobraba texto explicativo.
+**Decisión:**
+- **Dos entidades.** Un robot explorador sale 60 min antes que la tripulación y recorre la misma ruta modelada con los mismos tiempos; la tripulación sale en t = 0. Los 60 min son un supuesto del visor (`ROBOT_LEAD_MIN` en `web/main.js`), no del YAML. El reloj de misión va de −60 min a la llegada de la tripulación; el robot llega al punto de recogida una hora antes y espera ahí.
+- **Radar a pantalla completa**, centrado en la tripulación. Quedan *Layers* a la izquierda y dos tarjetas: TERRAIN (pendiente, máxima en 200 m, elevación) y WINDOW (transcurrido, restante, margen de retorno). El alcance ahora es la distancia del centro al borde superior.
+- **Se quitaron de la pantalla** REMS, RAD con *Replay* y alerta, la tarjeta *Next stop*, los recuadros de rumbo, alcance y límite de retorno, y todas las notas explicativas. El paquete conserva esos datos.
+- **Paradas clickeables:** la tarjeta 3 pasó a ser una ventana que se abre desde cada parada del mapa.
+- **3D en primera persona** a 1,7 m del suelo, sin HUD: relieve, rojo, ruta, columnas de luz en las paradas, el segundo tripulante y el robot. Se quitaron curvas de nivel, grilla, límite ámbar, carteles, registro de eventos, diales y mini radar.
+- Se mantuvieron el rótulo *Simulated EVA* y el panel ⓘ (ahora con el supuesto del robot), porque §7 los pide.
+**Impacto:**
+- §7 exigía los tres rótulos de RAD y el rótulo de REMS: ya no aplican porque esos datos no se muestran. Si vuelven, vuelven con sus rótulos.
+- Quedan sin efecto los ítems tildados de REMS, RAD, *Replay* y *Next stop* (bloque B) y el HUD del bloque C3D. `PLAN.md` §6 no se actualizó: lo decide el equipo.
+- A 4 m por celda el suelo cercano se ve liso en primera persona (limitación ya anotada el 15/11 01:20).
+- No se tocó código Python ni el paquete de datos.
+
+---
+
+## Domingo 15/11 18:20 — Robot a 1 km/h y vista 3D con visor, radiación y panel de simulación
+
+**Quién:** Agus (pedido) + Fable (pipeline e interfaz)
+**Qué decía el plan:** §8 deja fuera los datos en vivo; §7 prohíbe "real-time" y "live". La entrada de las 17:20 había dejado la vista 3D sin datos y el robot con los tiempos de la tripulación.
+**Qué pasó:** el equipo pidió que el robot vaya a su propia velocidad y que la vista 3D muestre lo que el robot le informa a la tripulación, con alertas sonoras que se puedan probar.
+**Decisión:**
+- **Robot:** 1 km/h constante sobre la ruta, sin paradas (`scenario.robot_speed_kmh` en el YAML; supuesto por terreno conocido, contra los ~0,15 km/h de Curiosity). El visor calcula la salida para que vaya siempre al menos 500 m por delante (`ROBOT_MIN_GAP_M` en `web/main.js`), redondeada a 10 min: **sale 90 min antes** y llega al punto de recogida 52 min antes que la tripulación.
+- **Pipeline:** `environment.py` agrega `climatology` a `radiation.json`: medias horarias de RAD agrupadas por día del año y hora, con media, mínimo y máximo entre todos los años (2012–2026), y el rango histórico de medias horarias (126–7.826 µGy/día). El paquete se reconstruyó completo; `radiation.json` pasó a 490 KB.
+- **Tarjeta RADIATION (3D):** media, mínimo y máximo del día de hoy en las 3 horas alrededor de la hora simulada, más el valor "ahora" del robot. **Simplificación declarada:** las horas de RAD son UTC, no hora local de Marte, así que "la misma hora" es una aproximación; el día es el del calendario terrestre del navegador.
+- **Panel de simulación:** las condiciones se fijan a mano y no son datos de sensores; el panel lo dice. En la interfaz se usa "simulated", no "real-time". Los límites de oxígeno (20 %), CO₂ (7,6 mmHg) y presión del traje (25 kPa) son **supuestos ilustrativos sin fuente verificada**. La presión atmosférica alerta fuera del rango medido por REMS en los soles del paquete; la radiación, sobre el umbral del paquete (3 × referencia); la hora, fuera de la ventana de la EVA.
+- **Voz:** API de voz del navegador, solo con voces instaladas en el equipo, para no hacer pedidos externos. Si no hay ninguna, suena solo el tono.
+- En la vista 3D vuelven las tarjetas TERRAIN y WINDOW, iguales a las del radar.
+**Impacto:**
+- Rol 3: revisar los tres límites del traje y conseguir fuente, o dejarlos rotulados como ilustrativos.
+- La alerta de radiación compara contra 3 × la referencia (557 µGy/día), no contra el máximo histórico de ese día (≈ 310). Si se prefiere lo segundo, es un cambio de una línea.
+- No se corrió `pytest` (falta en este Python) después de tocar `environment.py` y `build.py`; el build terminó con "package OK".
+- El audio no se pudo escuchar en la prueba automática.

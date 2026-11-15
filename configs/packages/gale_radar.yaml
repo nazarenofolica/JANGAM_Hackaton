@@ -32,6 +32,8 @@ scenario:
   dwell_min_per_stop: 20       # assumption: time spent at each science stop
   eva_duration_h: 6.0          # assumption: total EVA time budget (drives the amber return ring)
   start_lmst: "10:00"          # assumption: EVA start, local mean solar time
+  robot_speed_kmh: 1.0         # assumption: scout robot that drives the route ahead of the crew on known terrain
+                               # (Curiosity's top speed on flat ground is about 0.15 km/h)
 
 environment:
   rad_reference_window_days: 30   # reference dose rate = median of the last N days with data

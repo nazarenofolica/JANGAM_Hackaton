@@ -264,6 +264,7 @@ def build(config_path: Path) -> Path:
             f"{S['dwell_min_per_stop']} min at each science stop; EVA budget {S['eva_duration_h']} h; crew of {S['crew']}; pressurized rover pickup at {S['pickup']}.",
             "Astronaut position in the viewer is simulated along the modelled route (in a real EVA it would come from inertial/visual odometry).",
             f"Radiation alert at {E['rad_alert_factor']} x the reference rate is illustrative.",
+            f"Scout robot: drives the modelled route ahead of the crew at {S.get('robot_speed_kmh', 1.0)} km/h, assumed for known terrain (Curiosity's top speed is about 0.15 km/h).",
         ],
         "warnings": [
             "All environmental data are historical observations, not live or forecast values.",
