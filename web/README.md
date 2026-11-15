@@ -6,6 +6,7 @@ Static tactical-tablet viewer for a **simulated** Marswalk at Gale Crater. It re
 > Status: **radar built** (`index.html`, `style.css`, `main.js`): terrain shader with the red slope mask and the amber
 > return isochrone, modelled route, Curiosity track, stops, simulation clock, the three cards, the timeline, the
 > Overview and the Assumptions & sources panel. The screen spec is in `documentos/PLAN.md` §6 (Spanish).
+> A third view, **3D** (`view3d.js`), was added on Nov 15: see "3D walk view" below.
 
 ## URL parameters (demo and testing)
 
@@ -13,15 +14,48 @@ Static tactical-tablet viewer for a **simulated** Marswalk at Gale Crater. It re
 |---|---|---|
 | `t` | EVA minute to start at | `0` |
 | `play` | `0` starts paused | playing |
-| `speed` | `30`, `60`, `300` | `60` |
+| `speed` | `10`, `30`, `60`, `300` | `60` |
 | `range` | `250`, `500`, `1000` (m) | `250` |
-| `view` | `radar`, `overview` | `radar` |
+| `view` | `radar`, `overview`, `3d` | `radar` |
+| `cam` | `close`, `follow`, `high` (3D view only) | `follow` |
 | `replay` | `1` turns on the 2024-05-20 RAD replay | off |
 | `sol` | a REMS sol from `weather.json` | first sol |
 | `panel` | `info` opens Assumptions & sources | closed |
 
 Example: `http://localhost:8000/web/?t=262&play=0&view=overview` shows the amber return limit.
+3D examples: `?view=3d&t=118&play=0&replay=1` (illustrative RAD alert at a stop), `?view=3d&t=205&speed=10` (walking).
 Keyboard: space plays or pauses, Esc closes a panel.
+
+## 3D walk view (`view3d.js`)
+
+A chase camera follows the simulated astronaut over the terrain, with a visor-style HUD. It is built the first time
+the **3D** button is used (it loads `terrain/elevation_4m.u16` and `terrain/hirise.png`), so the radar start-up is
+not slower. Same package, same simulation clock, same rules for wording.
+
+- **Terrain:** mesh from `elevation` (4 m grid, **vertical scale 1:1**), in 64 × 64 cell tiles with four levels of
+  detail by distance (every 1, 2, 4 or 8 cells) and skirts that hide the seams. Shaded with normals from the DEM and
+  the `hillshade` layer; coloured with a **stylised tint** of the grayscale `hirise` image (not measured colour; the
+  lighting does not follow the time of day). Both facts are stated in the Layers legend.
+- **Anchored to the terrain (spatial data):** red `hazard` mask, contour lines every 10 m (bold every 50 m), a 10 m
+  north-aligned grid around the astronaut, the modelled route, Curiosity's track, a light column and a ring at each
+  stop, the amber return limit, and two callouts: the nearest cell above the slope limit (within 120 m) and the
+  nearest point of Curiosity's track (within 80 m, with its sol).
+- **In the HUD (time series, not tied to a spot):** radiation dial (log scale, reference and alert marks, the three
+  RAD labels), temperature dial (ground and air, REMS sol selector), UV, pressure, humidity, wind "not available",
+  EVA time dial with the estimated arrival mark, return margin, slope here and ahead, elevation.
+- **Appears as the walk advances:** the EVA log (top left) is a list of events computed once from the package and
+  shown by EVA time, so scrubbing the timeline works: stop approach, arrival and departure, steep sections (slope
+  above 75 % of the limit), crossings of Curiosity's track, every 100 m climbed, each LMST hour of REMS, half of the
+  EVA budget, the moment the return limit exists, and the RAD replay crossings and peak. A new entry flashes the
+  instrument it refers to. The next-stop card fills an approach bar over the last 150 m and opens the site record
+  (Navcam photo with credit, objective) on arrival.
+- **Camera:** presets Close / Follow / High; drag to look around, scroll or pinch to zoom, double-click to recentre.
+  The compass tape shows the view bearing, with marks for the walking direction, the next stop and the pickup.
+- **Radar:** stays on screen as a corner instrument (150 px, heading up).
+- **Motion:** with `prefers-reduced-motion` the scan pulse, the camera drop-in, the walking animation and the entry
+  animations are off.
+- **Performance:** measured on an integrated Intel UHD GPU at 1366 × 768: about 45–50 frames per second. The scene
+  follows the clock every frame; the radar, the cards and the HUD numbers refresh about 10 times per second.
 
 ## Run locally
 
@@ -66,7 +100,7 @@ Start from `site.json`: it lists every layer and file with its encoding, units, 
 | Key | File | Grid | Encoding |
 |---|---|---|---|
 | `hillshade` | `terrain/hillshade.png` | 2 m | uint8 gray relief (light from NW). Radar base, tint it dark |
-| `hirise` | `terrain/hirise.png` | 2 m | uint8 gray orbital photo (optional base) |
+| `hirise` | `terrain/hirise.png` | 2 m | uint8 gray orbital photo (surface texture of the 3D view) |
 | `slope` | `terrain/slope_deg.png` | 2 m | uint8, value = slope in degrees |
 | `hazard` | `terrain/hazard_slope.png` | 2 m | RGBA, red where slope > 20°, transparent elsewhere |
 | `elevation` | `terrain/elevation_4m.u16` | 4 m | raw uint16 little-endian; `z_m = offset + scale * v` (see `encoding`) |

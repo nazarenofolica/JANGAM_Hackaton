@@ -193,3 +193,157 @@ em { font-style: normal; color: var(--muted); }
 .fatal-box { max-width: 560px; padding: 22px; border: 1px solid var(--hazard); border-radius: 8px; background: var(--panel); }
 .fatal-box h2 { margin: 0 0 8px; } .fatal-box pre { background: #070A0E; padding: 8px 10px; border-radius: 4px; font-family: var(--mono); font-size: 12px; overflow-x: auto; }
 #fatal-msg { color: #FF8A80; font-family: var(--mono); font-size: 12px; }
+
+/* ---------- 3D walk view: full-width scene with a visor HUD; the radar becomes a corner instrument ---------- */
+.only-3d { display: none; }
+#app.v3d .only-3d { display: revert; }
+#app.v3d #main { grid-template-columns: minmax(0, 1fr); }
+#app.v3d #panel, #app.v3d #radar-side, #app.v3d #seg-range { display: none; }
+#app.v3d #legend { display: none; z-index: 6; left: 18px; top: 58px; width: 380px; columns: 2; column-gap: 18px; background: rgba(13, 18, 25, .96); }
+#app.v3d #legend .lg, #app.v3d #legend .legend-note { break-inside: avoid; }
+#app.v3d #legend .only-3d { display: block; break-before: column; }
+#app.v3d #legend .only-3d .legend-title { margin-top: 0; }
+#app.v3d.legend-open #legend { display: block; }
+#app.v3d #radar-controls { z-index: 4; top: 14px; bottom: auto; left: 18px; right: auto; justify-content: flex-start; align-items: center; gap: 10px; }
+#radar-controls .pill { pointer-events: auto; padding: 6px 12px; }
+#app.v3d #stage-wrap { z-index: 3; left: auto; right: 30px; top: 34px; transform: none; }
+#app.v3d #stage-wrap::after { content: "Radar · heading up"; position: absolute; left: -20px; right: -20px; top: calc(100% + 9px); text-align: center; color: var(--muted); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; }
+#app.v3d #stage .stop .lbl, #app.v3d .elbl, #app.v3d #rings text { display: none; }
+#app.v3d #north-badge { transform: scale(.8); }
+#app.v3d #alert-banner { top: 84px; bottom: auto; width: min(560px, 56%); }
+
+#view3d { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #07090C; }
+#v3-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#v3-canvas:active { cursor: grabbing; }
+#v3-vignette { position: absolute; inset: 0; pointer-events: none; transition: box-shadow .4s ease-out;
+  background:
+    linear-gradient(to top, rgba(7, 9, 12, .92) 0, rgba(7, 9, 12, .66) 21%, transparent 44%),
+    linear-gradient(to bottom, rgba(7, 9, 12, .66) 0, transparent 19%),
+    radial-gradient(ellipse at 50% 46%, transparent 56%, rgba(7, 9, 12, .5) 100%); }
+#view3d.rad-alert #v3-vignette { box-shadow: inset 0 0 110px rgba(255, 59, 48, .42); }
+#v3-loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; padding: 24px; text-align: center; background: #07090C; color: var(--muted); font-size: 13px; letter-spacing: .04em; }
+
+/* labels anchored to the terrain */
+#v3-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.v3-lbl { position: absolute; left: 0; top: 0; will-change: transform; --c: var(--next); }
+.v3-lbl::after { content: ""; position: absolute; left: -2.5px; top: -2.5px; width: 5px; height: 5px; border-radius: 50%; background: var(--c); }
+.v3-lbl .stem { position: absolute; left: 0; top: -20px; width: 1px; height: 20px; background: var(--c); opacity: .7; }
+.v3-lbl .box { position: absolute; left: 0; bottom: 20px; transform: translateX(-50%); display: grid; white-space: nowrap; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); border-radius: 3px; background: rgba(7, 10, 14, .8); font-size: 11px; line-height: 1.25; }
+.v3-lbl .nm { font-weight: 600; }
+.v3-lbl .sub { font-size: 10.5px; color: var(--c); }
+.v3-lbl.target .box { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent); }
+.v3-lbl.visited { --c: var(--visited); }
+.v3-lbl.pickup, .v3-lbl.you { --c: #FFFFFF; }
+.v3-lbl.context { --c: #7C8794; }
+.v3-lbl.context .nm { font-weight: 400; color: var(--muted); }
+.v3-lbl.hazard { --c: #FF6B61; }
+.v3-lbl.rover { --c: #C9D3DD; }
+.v3-lbl.rover .box { border-style: dashed; }
+
+/* compass tape */
+#v3-compass { position: absolute; left: 50%; top: 12px; width: min(440px, 34vw); transform: translateX(-50%); pointer-events: none; }
+#v3-tape-clip { position: relative; height: 42px; overflow: hidden; }
+#v3-tape-mask { position: absolute; inset: 0 14px; overflow: hidden; }
+#v3-tape { position: absolute; left: 0; top: 0; width: 2884px; height: 26px; border-top: 1px solid rgba(230, 237, 243, .4); will-change: transform; }
+#v3-tape i { position: absolute; top: 0; width: 1px; height: 5px; background: rgba(230, 237, 243, .5); }
+#v3-tape i.maj { height: 9px; background: rgba(230, 237, 243, .9); }
+#v3-tape b { position: absolute; top: 12px; transform: translateX(-50%); font: 400 10px var(--mono); color: rgba(230, 237, 243, .72); }
+#v3-tape b.cd { top: 11px; font-weight: 700; font-size: 11.5px; color: var(--text); }
+#v3-pips { position: absolute; inset: 0; }
+.v3-pip { position: absolute; left: 0; top: 0; --c: var(--next); }
+.v3-pip i { position: absolute; left: -5px; top: 0; border: 5px solid transparent; border-top: 8px solid var(--c); border-bottom: 0; }
+.v3-pip span { position: absolute; left: 0; top: 27px; transform: translateX(-50%); white-space: nowrap; font-size: 10.5px; font-weight: 600; color: var(--c); text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+.v3-pip.off i { transform: rotate(-90deg); }
+.v3-pip.off span { transform: translateX(-100%); }
+.v3-pip.off.left i { transform: rotate(90deg); }
+.v3-pip.off.left span { transform: none; }
+.v3-pip.pickup { --c: #FFFFFF; }
+.v3-pip.visited { --c: var(--visited); }
+.v3-pip.walk { --c: var(--route); }
+.v3-pip.walk i { border-top-width: 5px; }
+#v3-caret { position: absolute; left: 50%; top: -4px; width: 1px; height: 15px; background: var(--text); }
+#v3-bearing { display: flex; justify-content: center; align-items: baseline; gap: 7px; margin-top: 1px; text-shadow: 0 1px 3px #000; }
+#v3-bearing .num { font-size: 15px; }
+
+/* EVA log: entries appear as the walk reaches them */
+#v3-feed { position: absolute; left: 18px; top: 60px; width: 380px; display: grid; gap: 4px; pointer-events: none; }
+.v3-ev { display: grid; grid-template-columns: 36px 58px 1fr; gap: 8px; align-items: baseline; padding: 4px 8px; border-radius: 3px; background: rgba(7, 10, 14, .8); font-size: 11.5px; line-height: 1.3; opacity: calc(1 - var(--age) * .17); --c: var(--muted); }
+.v3-ev .tm { color: var(--muted); font-size: 10.5px; }
+.v3-ev .cat { font: 600 10px var(--mono); letter-spacing: .08em; color: var(--c); }
+.v3-ev.next { --c: var(--next); }
+.v3-ev.ring { --c: var(--ring); }
+.v3-ev.hazard { --c: #FF8A80; }
+.v3-ev.ground { --c: var(--ground); }
+.v3-ev.in { animation: v3-in .5s cubic-bezier(.16, 1, .3, 1); }
+@keyframes v3-in { from { opacity: .25; transform: translateX(-10px); background: color-mix(in srgb, var(--c) 34%, rgba(7, 10, 14, .66)); } }
+
+/* instrument clusters */
+.v3-cluster { position: absolute; bottom: 12px; display: grid; gap: 3px; pointer-events: none; }
+.v3-cluster button, .v3-cluster select { pointer-events: auto; }
+#v3-env { left: 18px; width: 484px; }
+#v3-eva { right: 18px; width: 440px; }
+.v3-gauges { display: flex; align-items: center; gap: 16px; margin-bottom: 2px; }
+.v3-gauge { position: relative; flex: none; width: 132px; height: 132px; }
+.v3-gauge svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.v3-gauge path { fill: none; stroke-width: 5; }
+.v3-gauge path.in { stroke-width: 3.5; }
+.v3-gauge .trk { stroke: rgba(140, 155, 171, .3); }
+.v3-gauge .val { stroke: var(--text); }
+.v3-gauge .val.ground { stroke: var(--ground); }
+.v3-gauge .val.air { stroke: var(--air); }
+.v3-gauge .tk { stroke: rgba(230, 237, 243, .42); stroke-width: .8; }
+.v3-gauge .tk.ref { stroke: var(--text); stroke-width: 1.5; }
+.v3-gauge .tk.alert { stroke: var(--hazard); stroke-width: 2; }
+.v3-gauge .tk.ring { stroke: var(--ring); stroke-width: 2; }
+.v3-gauge text { font: 8.5px var(--mono); fill: #A9B6C4; }
+.v3-gauge-c { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; padding-bottom: 8px; text-align: center; }
+.v3-gauge-c .v { font-size: 24px; line-height: 1.12; }
+.v3-gauge-c .v small { font-size: 11px; color: var(--muted); margin-left: 2px; }
+.v3-gauge-c .u { font-size: 10px; color: var(--muted); }
+.v3-gauge-c .u b { color: var(--air); font-weight: 600; }
+.v3-gauge-foot { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; color: var(--muted); font-size: 9px; letter-spacing: .06em; }
+#v3-rad.over .val { stroke: var(--hazard); }
+#v3-rad.over .v { color: #FF6B61; }
+.v3-side { display: grid; gap: 6px; flex: 1; min-width: 0; margin: 0; }
+.v3-side > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.v3-side dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.v3-side dd { margin: 0; font-size: 14px; white-space: nowrap; }
+.v3-side dd small { margin-left: 3px; font-size: 10px; color: var(--muted); }
+.v3-side dd em { font-size: 11px; }
+.v3-side > .v3-bar, .v3-bar { position: relative; display: block; height: 4px; border-radius: 2px; background: rgba(140, 155, 171, .3); overflow: hidden; }
+.v3-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--route); }
+.v3-bar b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); }
+.v3-side > .v3-sub, .v3-sub { display: block; color: var(--muted); font-size: 10.5px; }
+.v3-terrain { flex: none; width: 150px; }
+.v3-margin { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.v3-margin .v { font-size: 26px; line-height: 1.1; color: var(--ring); }
+.v3-margin .v small { font-size: 11px; color: var(--muted); margin-left: 3px; }
+.v3-margin.neg .v { color: var(--hazard); }
+.v3-fine { color: #A9B6C4; font-size: 10.5px; line-height: 1.4; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
+.v3-fine b { color: var(--text); font-weight: 600; }
+.v3-side .pill { padding: 2px 9px; font-size: 10.5px; }
+.v3-fine select { border: 1px solid var(--line); border-radius: 4px; padding: 1px 3px; background: var(--panel-2); font-size: 10.5px; }
+
+/* next stop: the site record opens when the walk reaches the stop */
+#v3-tg { position: absolute; right: 18px; top: 226px; width: 236px; display: grid; gap: 5px; padding: 9px 11px 10px; border: 1px solid color-mix(in srgb, var(--next) 38%, var(--line)); border-radius: 6px; background: rgba(13, 18, 25, .84); }
+#v3-tg.pickup { border-color: rgba(255, 255, 255, .4); }
+.v3-tg-name { font-size: 16px; font-weight: 700; line-height: 1.2; color: var(--next); }
+#v3-tg.pickup .v3-tg-name { color: #FFFFFF; }
+#v3-tg-prog { display: grid; gap: 4px; }
+#v3-tg-prog .v3-bar i { background: var(--next); }
+#v3-tg-rec { display: grid; gap: 5px; animation: v3-open .45s cubic-bezier(.16, 1, .3, 1); }
+#v3-tg-rec .photo-btn { width: 100%; height: 104px; }
+@keyframes v3-open { from { opacity: .3; transform: translateY(-6px); } }
+.ping { animation: v3-ping .8s cubic-bezier(.16, 1, .3, 1); }
+@keyframes v3-ping { from { filter: brightness(1.9); transform: scale(1.05); } }
+#btn-layers[aria-pressed="true"] { border-color: var(--next); background: #1D2B3A; color: var(--text); }
+
+#v3-cam { position: absolute; left: 50%; bottom: 12px; width: 340px; transform: translateX(-50%); display: grid; justify-items: center; gap: 5px; text-align: center; pointer-events: none; }
+#v3-cam .seg { pointer-events: auto; }
+.sw-contour { border-top: 1px solid rgba(158, 219, 242, .8); }
+.sw-grid { border-top: 1px solid rgba(0, 229, 255, .6); }
+.sw-beam { width: 3px; height: 14px; border: 0; justify-self: center; background: linear-gradient(to top, var(--next), transparent); }
+
+@media (max-width: 1340px) { #app.v3d #alert-banner { left: 410px; right: 200px; width: auto; transform: none; } }
+@media (max-width: 1280px) { #v3-cam .v3-fine { display: none; } #v3-cam { bottom: auto; top: 58px; left: 18px; transform: none; justify-items: start; } #v3-feed { top: 100px; } }
+@media (prefers-reduced-motion: reduce) { .v3-ev.in, #v3-tg-rec, .ping { animation: none; } #v3-vignette { transition: none; } }

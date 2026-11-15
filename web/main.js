@@ -4,10 +4,13 @@ import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { createView3D } from './view3d.js';
 
 const PKG = '../data/processed/gale_radar/';
 const RANGES = [250, 500, 1000];
-const SPEEDS = [30, 60, 300];
+const SPEEDS = [10, 30, 60, 300];
+const VIEWS = ['radar', 'overview', '3d'];
+const MINI_RADAR_PX = 150;      // the radar becomes a corner instrument in the 3D view
 const LOOKAHEAD_M = 12;        // heading = direction to the route point this far ahead
 const AHEAD_WINDOW_M = 200;    // "max slope ahead" window
 const HEADING_TAU_S = 0.5;     // low-pass on the heading (the grid route turns in 45 deg steps)
@@ -281,7 +284,7 @@ async function start() {
     playing: q.get('play') !== '0',
     speed: SPEEDS.includes(qNum('speed', 60)) ? qNum('speed', 60) : 60,
     range: RANGES.includes(qNum('range', 250)) ? qNum('range', 250) : 250,
-    view: q.get('view') === 'overview' ? 'overview' : 'radar',
+    view: VIEWS.includes(q.get('view')) ? q.get('view') : 'radar',
     replay: q.get('replay') === '1',
     solIdx: 0,
     heading: null,
@@ -422,16 +425,17 @@ async function start() {
     const sel = $('sel-sol');
     weather.sols.forEach((s, k) => { const o = document.createElement('option'); o.value = k; o.textContent = `sol ${s.sol} · ${s.date_utc_approx}`; sel.appendChild(o); });
     sel.value = state.solIdx;
-    sel.addEventListener('change', () => { state.solIdx = Number(sel.value); drawRems(); refresh(); });
+    sel.addEventListener('change', () => setSol(Number(sel.value)));
   }
+  function setSol(i) { state.solIdx = clamp(i, 0, weather.sols.length - 1); $('sel-sol').value = state.solIdx; drawRems(); refresh(); }
 
   // RAD
   const ev = rad.solar_event;
   const peakIdx = ev.hourly.reduce((best, h, k) => (h.value > ev.hourly[best].value ? k : best), 0);
   const REPLAY_PEAK_EVA_H = 2;                           // the event peak lands 2 h into the EVA (assumption of the replay)
   const replayStart = Math.max(0, peakIdx - REPLAY_PEAK_EVA_H);
-  function radRate(t) {                                  // µGy/day at EVA minute t
-    if (!state.replay) return rad.reference.value;
+  function radRate(t, replay = state.replay) {           // µGy/day at EVA minute t
+    if (!replay) return rad.reference.value;
     const p = replayStart + t / 60, k = Math.min(ev.hourly.length - 1, Math.floor(p));
     const a = ev.hourly[k].value, b = ev.hourly[Math.min(ev.hourly.length - 1, k + 1)].value;
     return lerp(a, b, p - Math.floor(p));
@@ -463,7 +467,8 @@ async function start() {
       : `<b>Measured by Curiosity RAD</b> · median ${esc(rad.reference.from)} → ${esc(rad.reference.to)} (historical).`;
     $('rad-l1').title = state.replay ? `${ev.label} Peak ${fmtInt(ev.peak_value)} µGy/day at ${ev.peak_time_utc} UTC, placed ${REPLAY_PEAK_EVA_H} h into the EVA.` : `${rad.reference.label}. ${rad.quantity}.`;
   }
-  $('btn-replay').addEventListener('click', () => { state.replay = !state.replay; drawRad(); refresh(); });
+  function toggleReplay() { state.replay = !state.replay; drawRad(); refresh(); }
+  $('btn-replay').addEventListener('click', toggleReplay);
 
   // info panel
   {
@@ -519,7 +524,8 @@ async function start() {
     $('ph-caption').textContent = `Curiosity Navcam (${p.instrument}) · sol ${p.sol} · ${p.date_utc} UTC · taken about ${p.stop_match_error_m} m from the stop · photo ${photo.k + 1} of ${s.photos.length} · Credit: ${p.credit}`;
     $('ph-prev').disabled = $('ph-next').disabled = s.photos.length < 2;
   }
-  $('st-photo-btn').addEventListener('click', () => { if (photo.stop && photo.stop.photos.length) { photo.k = 0; showPhoto(); $('photo-modal').hidden = false; } });
+  function openPhoto(s) { if (s && s.photos.length) { photo.stop = s; photo.k = 0; showPhoto(); $('photo-modal').hidden = false; } }
+  $('st-photo-btn').addEventListener('click', () => openPhoto(shownStop));
   $('ph-prev').addEventListener('click', () => { const n = photo.stop.photos.length; photo.k = (photo.k + n - 1) % n; showPhoto(); });
   $('ph-next').addEventListener('click', () => { photo.k = (photo.k + 1) % photo.stop.photos.length; showPhoto(); });
 
@@ -531,10 +537,37 @@ async function start() {
     $('btn-play').textContent = state.playing ? '❚❚' : '▶';
     $('btn-play').title = state.playing ? 'Pause the simulation' : 'Play the simulation';
     $('app').classList.toggle('overview', state.view === 'overview');
+    $('app').classList.toggle('v3d', state.view === '3d');
+    $('view3d').hidden = state.view !== '3d';
     updateRingLabels();
   }
+
+  // 3D walk view: built on first use (it loads the elevation grid and the HiRISE image)
+  let view3d = null, view3dLoading = false;
+  function ensure3D() {
+    if (view3d || view3dLoading) return;
+    view3dLoading = true;
+    createView3D({
+      PKG, site, route, track, stops, rad, weather, state,
+      images: { hill: texHill.image, hazard: texHazard.image, ret: texReturn.image },
+      fn: { sampleT, sampleD, valueAt: tempAt, radRateAt: radRate, radDose, stopClass, fmtHM, fmtInt, fmtSigned, fmtDist, esc },
+      actions: { setSol, toggleReplay, openPhoto },
+      k: { evaBudget, evaTotal, startLmstMin, slopeLimit, retMaxMin, tMin, tMax },
+    }).then((v) => {
+      view3d = v;
+      v.setTrackVisible($('chk-rover').checked);
+      layout(); refresh();
+      if (state.view === '3d') v.enter();
+    }).catch((err) => {
+      console.error(err);
+      view3dLoading = false;
+      $('v3-loading').hidden = false;
+      $('v3-loading').textContent = `The 3D view could not start: ${err && err.message ? err.message : err}`;
+    });
+  }
   $('seg-range').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.range = Number(b.dataset.range); syncControls(); refresh(); } });
-  $('seg-view').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.view = b.dataset.view; syncControls(); layout(); refresh(); } });
+  $('seg-view').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { const was = state.view; state.view = b.dataset.view; if (state.view === '3d') ensure3D(); syncControls(); layout(); refresh(); if (state.view === '3d' && was !== '3d' && view3d) view3d.enter(); } });
+  $('btn-layers').addEventListener('click', () => { const on = $('app').classList.toggle('legend-open'); $('btn-layers').setAttribute('aria-pressed', String(on)); });
   $('seg-speed').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.speed = Number(b.dataset.speed); syncControls(); } });
   function togglePlay() {
     if (!state.playing && state.t >= evaTotal) { state.t = 0; state.snapHeading = true; }
@@ -542,7 +575,7 @@ async function start() {
   }
   $('btn-play').addEventListener('click', togglePlay);
   $('tl-input').addEventListener('input', (e) => { state.t = clamp(Number(e.target.value), 0, evaTotal); state.snapHeading = true; refresh(); });
-  $('chk-rover').addEventListener('change', (e) => { for (const l of trackLines) l.visible = e.target.checked; });
+  $('chk-rover').addEventListener('change', (e) => { for (const l of trackLines) l.visible = e.target.checked; if (view3d) view3d.setTrackVisible(e.target.checked); refresh(); });
   window.addEventListener('keydown', (e) => {
     if (e.target.closest('select, input[type="checkbox"]')) return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
@@ -552,7 +585,7 @@ async function start() {
   // ---------------------------------------------------------------- layout
   function layout() {
     const area = $('radar-area');
-    const size = Math.max(240, Math.floor(Math.min(area.clientWidth - 388, area.clientHeight - 52)));
+    const size = state.view === '3d' ? MINI_RADAR_PX : Math.max(240, Math.floor(Math.min(area.clientWidth - 388, area.clientHeight - 52)));
     state.size = size;
     const wrap = $('stage-wrap');
     wrap.style.width = wrap.style.height = `${size}px`;
@@ -560,13 +593,15 @@ async function start() {
     renderer.setPixelRatio(pr);
     renderer.setSize(size, size, false);
     for (const m of lineMats) m.linewidth = m.userData.px * pr;
+    if (view3d) view3d.resize();
   }
   window.addEventListener('resize', () => { layout(); refresh(); });
 
   // ---------------------------------------------------------------- per-frame update
   const v3 = new THREE.Vector3();
   const ringCache = { level: null, x: 0, y: 0, dist: null };
-  let lastStopId = null;
+  let lastStopId = null, shownStop = null;
+  let snap = null, snapRev = 0;                            // what the 3D view draws; rebuilt by refresh()
 
   function refresh() {
     const t = state.t;
@@ -722,7 +757,7 @@ async function start() {
     $('st-dz').innerHTML = `${fmtSigned(tgt.dwelling ? 0 : s.z - pos.z)}<small>m</small>`;
     if (lastStopId !== s.id) {
       lastStopId = s.id;
-      photo.stop = s;
+      shownStop = s;
       const p = s.photos[0];
       $('st-photo-btn').hidden = !p;
       if (p) {
@@ -736,10 +771,12 @@ async function start() {
         : '<b>Objective: pending</b>')
         + (p ? `<br>Photo taken ${esc(p.date_utc)} (historical). Tap to enlarge.` : '');
     }
+
+    snap = { rev: ++snapRev, t, pos, hdg, remaining, level, ahead, back, margin, sol, hour, air, ground, rate, over, tgt };
   }
 
   // ---------------------------------------------------------------- loop
-  let lastNow = performance.now();
+  let lastNow = performance.now(), lastRefresh = 0, stale = false;
   function frame(now) {
     const dt = Math.min(0.25, (now - lastNow) / 1000);
     lastNow = now;
@@ -757,12 +794,18 @@ async function start() {
         if (Math.abs(d) > 1e-3) { state.heading += d * (1 - Math.exp(-dt / HEADING_TAU_S)); dirty = true; }
       }
     }
-    if (dirty) refresh();
+    // In the 3D view the scene follows state.t every frame; the radar, the cards and the HUD numbers go at ~10 Hz.
+    if (dirty || stale) {
+      if (state.view !== '3d' || now - lastRefresh > 95) { refresh(); lastRefresh = now; stale = false; }
+      else stale = true;
+    }
+    if (state.view === '3d' && view3d) view3d.frame(snap, dt);
     requestAnimationFrame(frame);
   }
 
   drawRems();
   drawRad();
+  if (state.view === '3d') ensure3D();
   syncControls();
   layout();
   refresh();

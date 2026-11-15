@@ -45,7 +45,125 @@
         <div class="lg"><span class="dot dot-pickup"></span><span>Rover pickup</span></div>
         <div class="lg"><span class="dot dot-context"></span><span>Not on this route</span></div>
         <div class="legend-note">Stop labels: straight-line distance · Δz from here. Relief does not resolve obstacles under ~4–6 m.</div>
+        <div class="only-3d">
+          <div class="legend-title">3D view</div>
+          <div class="lg"><span class="sw sw-contour"></span><span>Contour lines <em>every 10 m, bold every 50 m</em></span></div>
+          <div class="lg"><span class="sw sw-grid"></span><span>Ground grid <em>10 m cells, north aligned</em></span></div>
+          <div class="lg"><span class="sw sw-beam"></span><span>Stop beacon <em>light column, 90 m tall</em></span></div>
+          <div class="legend-note">Vertical scale 1:1 (HiRISE DEM at 4 m). Surface colour is a stylised tint of the grayscale HiRISE image, not measured colour, and the lighting does not follow the time of day. Two figures: crew of 2 (assumed).</div>
+        </div>
       </aside>
+
+      <section id="view3d" hidden aria-label="3D walk view">
+        <canvas id="v3-canvas"></canvas>
+        <div id="v3-vignette"></div>
+        <div id="v3-labels"></div>
+
+        <div id="v3-compass" aria-hidden="true">
+          <div id="v3-tape-clip">
+            <div id="v3-tape-mask"><div id="v3-tape"></div></div>
+            <div id="v3-pips"><div class="v3-pip walk" id="v3-walk-pip" title="Walking direction"><i></i></div></div>
+          </div>
+          <div id="v3-caret"></div>
+          <div id="v3-bearing"><span class="num" id="v3-bearing-v">000°</span><span class="k">view bearing</span></div>
+        </div>
+
+        <div id="v3-feed" aria-label="EVA log"></div>
+
+        <div id="v3-env" class="v3-cluster">
+          <div class="v3-gauges">
+            <div class="v3-gauge" id="v3-rad">
+              <svg viewBox="-6 -6 132 132" aria-hidden="true">
+                <path class="trk" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
+                <path class="val" id="v3-rad-arc" pathLength="100" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
+                <g id="v3-rad-ticks"></g>
+              </svg>
+              <div class="v3-gauge-c"><span class="k">Radiation</span><span class="v num" id="v3-rad-v">–</span><span class="u">µGy/day</span></div>
+              <span class="v3-gauge-foot">log scale</span>
+            </div>
+            <div class="v3-gauge" id="v3-temp">
+              <svg viewBox="-6 -6 132 132" aria-hidden="true">
+                <path class="trk" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
+                <path class="trk in" d="M 31.01 88.99 A 41 41 0 1 1 88.99 88.99"/>
+                <path class="val ground" id="v3-tg-arc" pathLength="100" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
+                <path class="val air in" id="v3-ta-arc" pathLength="100" d="M 31.01 88.99 A 41 41 0 1 1 88.99 88.99"/>
+                <g id="v3-temp-ticks"></g>
+              </svg>
+              <div class="v3-gauge-c"><span class="k">Ground</span><span class="v num" id="v3-ground-v">–</span><span class="u air num" id="v3-air-v">air –</span></div>
+              <span class="v3-gauge-foot">°C</span>
+            </div>
+            <dl class="v3-side">
+              <div><dt>UV</dt><dd class="num" id="v3-uv">–</dd></div>
+              <div><dt>Pressure</dt><dd class="num" id="v3-press">–</dd></div>
+              <div><dt>Humidity</dt><dd class="num" id="v3-rh">–</dd></div>
+              <div><dt>Wind</dt><dd><em>not available</em></dd></div>
+              <div><dt>RAD scenario</dt><dd><button id="v3-replay" class="pill" aria-pressed="false" title="Run the RAD series of the 2024-05-20 solar particle event on the EVA clock (historical scenario, not a prediction)">Replay</button></dd></div>
+            </dl>
+          </div>
+          <div class="v3-fine" id="v3-rad-src"></div>
+          <div class="v3-fine" id="v3-rad-budget"></div>
+          <div class="v3-fine"><b>Historical REMS observations at Gale Crater</b> · hourly medians · <select id="v3-sol" aria-label="REMS sol"></select></div>
+        </div>
+
+        <div id="v3-eva" class="v3-cluster">
+          <div class="v3-gauges">
+            <dl class="v3-side v3-terrain" id="v3-terrain">
+              <div><dt>Slope here</dt><dd class="num" id="v3-slope-v">–</dd></div>
+              <div class="v3-bar" title="Slope here against the walkable limit; the mark is the steepest slope in the next 200 m"><i id="v3-slope-bar"></i><b id="v3-slope-ahead"></b></div>
+              <div><dt>Max next 200 m</dt><dd class="num" id="v3-ahead-v">–</dd></div>
+              <div><dt>Elevation</dt><dd class="num" id="v3-elev-v">–</dd></div>
+              <div class="v3-sub num" id="v3-climb-v"></div>
+            </dl>
+            <div class="v3-gauge" id="v3-time">
+              <svg viewBox="-6 -6 132 132" aria-hidden="true">
+                <path class="trk" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
+                <path class="val" id="v3-eva-arc" pathLength="100" d="M 24.64 95.36 A 50 50 0 1 1 95.36 95.36"/>
+                <g id="v3-eva-ticks"></g>
+              </svg>
+              <div class="v3-gauge-c"><span class="k">EVA time left</span><span class="v num" id="v3-left-v">–</span><span class="u">h:min of budget</span></div>
+              <span class="v3-gauge-foot">amber mark: est. arrival</span>
+            </div>
+            <div class="v3-margin" id="v3-margin">
+              <span class="k">Return margin</span>
+              <span class="v num" id="v3-margin-v">–</span>
+              <span class="v3-sub" id="v3-back-v"></span>
+            </div>
+          </div>
+          <div class="v3-fine" id="v3-terrain-note"></div>
+        </div>
+
+        <div id="v3-tg">
+          <div class="k" id="v3-tg-head">NEXT STOP</div>
+          <div class="v3-tg-name" id="v3-tg-name">–</div>
+          <div class="metrics metrics-tight">
+            <div class="metric"><span class="k">By route</span><span class="v num" id="v3-tg-dist">–</span></div>
+            <div class="metric"><span class="k" id="v3-tg-eta-k">ETA</span><span class="v num" id="v3-tg-eta">–</span></div>
+            <div class="metric"><span class="k">Δz</span><span class="v num" id="v3-tg-dz">–</span></div>
+          </div>
+          <div id="v3-tg-prog" hidden>
+            <div class="v3-bar"><i id="v3-tg-bar"></i></div>
+            <div class="v3-fine">Site record opens on arrival · approach <span class="num" id="v3-tg-prog-v">0 %</span></div>
+          </div>
+          <div id="v3-tg-rec" hidden>
+            <button id="v3-tg-photo-btn" class="photo-btn" title="Enlarge photo">
+              <img id="v3-tg-photo" alt="">
+              <span class="photo-credit" id="v3-tg-credit"></span>
+            </button>
+            <div class="v3-fine" id="v3-tg-note"></div>
+          </div>
+        </div>
+
+        <div id="v3-cam">
+          <div class="seg" id="seg-cam" role="group" aria-label="Camera">
+            <button data-cam="close">Close</button>
+            <button data-cam="follow">Follow</button>
+            <button data-cam="high">High</button>
+          </div>
+          <span class="v3-fine">Drag to look · scroll to zoom · double-click to recentre</span>
+        </div>
+
+        <div id="v3-loading">Building the terrain from the HiRISE DEM…</div>
+      </section>
 
       <div id="stage-wrap">
         <div id="stage">
@@ -72,7 +190,9 @@
         <div class="seg" id="seg-view" role="group" aria-label="View">
           <button data-view="radar">Radar</button>
           <button data-view="overview">Overview</button>
+          <button data-view="3d" title="3D walk view: follow the simulated astronaut over the HiRISE terrain">3D</button>
         </div>
+        <button id="btn-layers" class="pill only-3d" aria-pressed="false" title="Show or hide the layer legend">Layers</button>
       </div>
     </section>
 
@@ -141,6 +261,7 @@
   <footer id="bottombar">
     <button id="btn-play" class="play-btn" aria-label="Play or pause">▶</button>
     <div class="seg" id="seg-speed" role="group" aria-label="Simulation speed">
+      <button data-speed="10">×10</button>
       <button data-speed="30">×30</button>
       <button data-speed="60">×60</button>
       <button data-speed="300">×300</button>

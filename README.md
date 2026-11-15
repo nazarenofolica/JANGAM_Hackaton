@@ -16,7 +16,11 @@ at a glance, using NASA mission data for Gale Crater:
 The EVA is **simulated**: the astronaut's position moves along the modelled route on a playable clock. All
 environmental data are **historical observations**, not live data.
 
-> Branch `plan2d` (2D radar). The 3D version of the project lives in `develop`.
+The viewer has three views of the same simulated EVA: **Radar** (heading up, the main screen), **Overview**
+(north up, the whole route) and **3D** (a chase camera over the HiRISE terrain with a visor-style HUD, where log
+entries and site records appear as the walk advances). Details in [`web/README.md`](web/README.md).
+
+> Branch `plan2d` (2D radar plus a 3D walk view). The 3D planning console of the first plan lives in `develop`.
 > Status: data package ready; viewer in progress (Nov 14–15, 2026).
 
 ## Quick start

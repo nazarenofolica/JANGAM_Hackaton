@@ -151,3 +151,28 @@ El plan pasó por 3 versiones, revisadas por un subagente (Claude Opus) en dos r
 - Roles 2 y 3: decidir si el anillo tiene que verse en el radar. Opciones: bajar el presupuesto de EVA en el YAML (con 6 h sobran 77 min), agregar un alcance mayor, o dejarlo como capa de *Overview*.
 - Quien mantiene el pipeline: cambiar el texto de esa advertencia en el origen y reconstruir el paquete, o aceptar la negación "not live".
 - No se corrió `python -m pytest -q` en esta sesión: el Python de esta máquina no tiene `pytest` instalado y no se tocó código Python.
+
+---
+
+## Domingo 15/11 01:20 — Tercera vista: mapa 3D inmersivo (*3D walk*)
+
+**Quién:** Nazareno (pedido) + Fable (interfaz)
+**Qué decía el plan:** §8 deja el 3D fuera del alcance de esta branch ("No entra: … 3D"); el visor tiene dos vistas, *Radar* y *Overview*.
+**Qué pasó:** se pidió sumar, además del radar y del *Overview*, un mapa 3D con estética de visor futurista (referencia: el HUD de Subnautica), donde las métricas aparecen a medida que se camina y se priorizan las de más valor (radiación, temperatura).
+**Decisión:**
+- Se agrega una **tercera vista `3D`** al mismo visor. No se mezcla con `develop`: es código nuevo (`web/view3d.js`) que lee el mismo paquete `gale_radar`, sin datos ni librerías nuevas (three.js de `web/vendor/`).
+- El relieve 3D sale de `terrain/elevation_4m.u16` (4 m, **escala vertical 1:1**), con `hirise` y `hillshade` como textura. El color es un **tinte estilizado** del HiRISE en grises, no color medido, y la luz no sigue la hora del día: se dice en la leyenda.
+- **Datos espaciales anclados al terreno** (pendiente > 20°, curvas de nivel cada 10 m, ruta, huella de Curiosity, paradas, límite de retorno). **Datos temporales en el HUD** (RAD y REMS): no se clavan en el terreno porque no son mediciones de ese punto, sino series históricas por hora.
+- Valen las mismas reglas de §7: RAD con sus tres rótulos, REMS como *historical* con sol y fecha, *Simulated EVA*, sin "safe", "live" ni "real-time".
+- En la vista 3D el panel de 3 tarjetas se reemplaza por el HUD y el radar pasa a ser un mini radar en la esquina. *Radar* y *Overview* no cambian.
+- Se agrega la velocidad **×10** (a ×60 el astronauta avanza ~40 m por segundo de pantalla, demasiado para una cámara de seguimiento).
+
+**Impacto:** `PLAN.md` §8 queda desactualizado en ese punto ("3D" ya no está fuera de alcance en `plan2d`); lo decide el equipo. La pasada visual del bloque C ahora incluye la vista 3D. Rol 3: revisar los rótulos de RAD y REMS del HUD.
+
+**Implementado (Fable, 15/11 02:00):**
+- `web/view3d.js` (módulo nuevo), más cambios chicos en `main.js`, `index.html` y `style.css`. El módulo recibe los datos ya cargados por el radar y solo pide dos archivos más del paquete.
+- **Lo que aparece al caminar:** un registro de eventos calculado una sola vez a partir del paquete y mostrado según el reloj de la EVA (por eso funciona al mover la línea de tiempo), dos carteles anclados al terreno (la celda > 20° más cercana y el punto más cercano de la huella de Curiosity, con su sol) y la ficha de la parada, que se abre al llegar.
+- **Rendimiento:** con el relieve completo a 4 m (1,9 millones de triángulos) la GPU integrada daba ~31 cuadros por segundo reproduciendo. Se agregaron niveles de detalle por distancia (cada 1, 2, 4 u 8 celdas, con faldones para tapar las juntas) y el HUD pasó a actualizarse ~10 veces por segundo. Quedó en 45–50.
+- **El pico del *Replay* en el registro** es el de la serie horaria (8.025 µGy/día), no el `peak_value` de 10 minutos (8.378): es la misma serie que ya usaba el radar.
+- **No se hizo:** vista en primera persona (a 4 m por celda el suelo cercano se ve borroso), exageración vertical, y hora del día en la iluminación (haría falta la posición del Sol; se prefirió decir que la luz es fija).
+- `python -m pytest -q`: 9 pasan (no se tocó código Python).

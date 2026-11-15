@@ -2,7 +2,7 @@
 
 **Para toda sesión de Claude o Fable:** leer este archivo y [`PLAN.md`](PLAN.md) antes de tocar nada. Trabajar el primer ítem sin tildar del primer bloque incompleto. Al terminar un ítem, tildarlo y anotar al lado la fecha, la hora y cómo se verificó. No tildar nada sin verificar. Todo desvío del plan va a [`BITACORA.md`](BITACORA.md). **No hacer commit ni push sin autorización explícita.**
 
-**Última actualización:** dom 15/11 00:25 — bloques 0, A y B completos (interfaz generada con Fable); del bloque C quedan hechos *Overview*, panel ⓘ y flechas de borde. Sigue el resto del bloque C.
+**Última actualización:** dom 15/11 02:00 — bloques 0, A y B completos (interfaz generada con Fable); del bloque C quedan hechos *Overview*, panel ⓘ y flechas de borde. Se agregó el **bloque C3D** (tercera vista *3D*, pedida por el equipo; desvío anotado en BITACORA), completo. Sigue el resto del bloque C.
 
 ## Hecho (bloque 0)
 - [x] Datos descargados, catalogados y auditados (14/11). Detalle en `data/README.md` y `MANIFEST.json`.
@@ -43,8 +43,18 @@ Condición de salida: las 3 preguntas se responden en pantalla.
 - [x] Vista *Overview* (cenital, norte arriba, todo el recorrido) (15/11 00:25). Adelantada: es la única vista donde se ve el anillo ámbar. Verificado por captura.
 - [x] Panel ⓘ *Assumptions & sources*: supuestos, advertencias, fuentes y validación contra Curiosity (15/11 00:25). Verificado por captura. Pendiente del equipo: una advertencia de `site.json` contiene la palabra "live" (ver BITACORA).
 - [x] Paradas fuera de alcance como flechas en el borde del radar (15/11 00:25). Solo se rotula la próxima; las demás quedan como flecha. Verificado por captura.
-- [ ] Pasada visual y prueba a 1366×768, sin errores de consola y sin pedidos de red fuera del repo. *(Parcial 15/11 00:25: en Chrome headless a 1366×768 hay 0 mensajes de consola y 23 pedidos, todos dentro del repo. Falta la pasada visual de una persona en una tablet o un navegador real.)*
+- [ ] Pasada visual y prueba a 1366×768, sin errores de consola y sin pedidos de red fuera del repo. *(Parcial 15/11 00:25: en Chrome headless a 1366×768 hay 0 mensajes de consola y 23 pedidos, todos dentro del repo. Parcial 15/11 02:00: lo mismo con la vista 3D, hasta 29 pedidos (según las fotos que se abran), todos dentro del repo. Falta la pasada visual de una persona en una tablet o un navegador real, **incluida la vista 3D**: fluidez, arrastre y zoom táctil.)*
 - [ ] `index.html` en la raíz que redirige a `web/`; GitHub Pages activo.
+
+## Bloque C3D — Vista 3D inmersiva (pedido del equipo, fuera del plan original; ver BITACORA 15/11 01:20)
+Condición de salida: se camina la ruta en 3D con un HUD que respeta §7 y las otras dos vistas no cambian.
+- [x] `web/view3d.js` + botón **3D** junto a *Radar* y *Overview*; se construye recién al entrar (carga `elevation_4m.u16` y `hirise.png`) (15/11 02:00). Verificado por CDP en Chrome headless a 1366×768: 0 mensajes de consola, 23–29 pedidos, todos dentro del repo; `?view=3d` también entra directo.
+- [x] Relieve 3D a escala vertical 1:1 con rojo (> 20°), curvas de nivel cada 10 m, grilla de 10 m, ruta, huella de Curiosity, balizas en las 9 paradas y límite ámbar de retorno (15/11 02:00). Verificado por captura con las cámaras *Close*, *Follow* y *High* y con la cámara alejada a mano (t = 268: se ve la línea ámbar sobre el bloque completo).
+- [x] HUD: dial de radiación (escala logarítmica, marcas de referencia y de alerta, los tres rótulos de RAD), dial de temperatura de suelo y aire con selector de sol, UV, presión, humedad, viento "not available", dial de tiempo de EVA, margen de retorno, pendiente y elevación (15/11 02:00). Verificado: en t = 118 con *Replay* muestra 7.826 µGy/día, alerta ilustrativa y "replay so far 244 µGy"; al cambiar el sol desde el HUD cambia también la tarjeta del radar (sol 1440: aire −18 °C).
+- [x] Registro de eventos que aparece al caminar (paradas, tramos empinados, cruces con la huella de Curiosity, cada 100 m de subida, cada hora de REMS, mitad del presupuesto, aparición del límite de retorno, cruces y pico del *Replay*) (15/11 02:00). Verificado recorriendo toda la EVA cada 1,5 min: 44 entradas distintas (19 de paradas, 10 de terreno, 5 de Curiosity, 4 de REMS, 3 de EVA, 3 de RAD), sin "safe", "live" ni "real-time".
+- [x] Ficha de parada: barra de aproximación en los últimos 150 m y, al llegar, foto Navcam con crédito y objetivo; la foto se agranda con el visor existente (15/11 02:00). Verificado por captura en Murray Buttes, Vera Rubin Ridge y Hematite Hotspot.
+- [x] Mini radar en la esquina, cinta de brújula, leyenda de capas con la aclaración del tinte y de la escala, velocidad ×10 (15/11 02:00). Verificado por captura; *Radar* y *Overview* se ven igual que antes al volver.
+- [x] Rendimiento y accesibilidad: niveles de detalle del relieve por distancia, HUD a ~10 Hz, `prefers-reduced-motion` (15/11 02:00). Verificado: GPU integrada Intel UHD, 1366×768, 45–50 cuadros por segundo (antes de optimizar, ~31 reproduciendo). Con movimiento reducido emulado (1024×768) carga sin errores y el pulso no se dibuja; la entrada de cámara y la caminata se apagan con la misma condición en el código, pero no se miraron en movimiento. Probado también a 1920×1080.
 
 ## Bloque D — Cierre · **congelar código dom 17:00**
 - [ ] Revisión final de `PLAN.md` §10, pregunta por pregunta.
@@ -61,3 +71,4 @@ Condición de salida: las 3 preguntas se responden en pantalla.
 - [ ] Verificar una referencia de velocidad de caminata (Apollo) para justificar la velocidad base.
 - [ ] Activar GitHub Pages y probar el link en una ventana privada.
 - [ ] Guion, demo y formulario; lista de cumplimiento de `PLAN.md` §12.
+- [ ] Decidir si `PLAN.md` §6 y §8 se actualizan para incluir la vista 3D (hoy §8 dice que el 3D no entra) y si la demo abre en *Radar* o en *3D*.
