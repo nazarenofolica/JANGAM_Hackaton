@@ -103,3 +103,28 @@ El plan pasó por 3 versiones, revisadas por un subagente (Claude Opus) en dos r
 **Decisión:** ...
 **Impacto:** <qué cambia para otros roles, si algo>
 ```
+
+---
+
+## Domingo 15/11 00:20 — Branch `plan2d`: del visor 3D al radar 2D
+
+**Quién:** Agus (idea) + Claude (ajustes, pipeline y documentación)
+**Qué decía el plan:** visor 3D en three.js para planificar desde una consola en el hábitat, comparando 3 rutas ("Marswalk — Decision Support"). Ese plan sigue vigente en `develop`.
+**Qué pasó:** se propuso una interfaz más simple y útil para el momento de la caminata: un **radar táctico en tablet**, centrado en el astronauta, que responde 3 preguntas (por dónde camino, cuánto tiempo me queda, adónde voy a investigar). Se revisó la idea contra los datos y las reglas del plan, y se ajustó antes de implementarla.
+
+| Idea original | Qué pasó | Decisión |
+|---|---|---|
+| Interfaz "en tiempo real" | No hay datos en vivo: todo es histórico | **EVA simulada**: la posición avanza sobre la ruta modelada con un reloj; rótulo *Simulated EVA* |
+| Píxeles oscuros de HiRISE = arena blanda (rojo) | Probado: en las paradas *Bagnold Dunes* el brillo da percentil 48 y 96 (no oscuro); solo *Bagnold Dunes South* es oscura (p19) | **Descartado.** El rojo es solo pendiente > 20° |
+| Línea verde = "ruta segura validada por Curiosity" | Que pase un rover no prueba que pueda pasar un humano; el plan prohíbe "safe". Curiosity hizo 9,3 km entre puntos separados por 3,7 km en línea recta | Verde = **ruta modelada**; Curiosity = línea punteada de referencia |
+| Anillo ámbar por batería, temperatura y radiación | No hay datos de batería ni de su relación con la temperatura; la dosis de unas horas (~46 µGy en 6 h) no limita la distancia | **Isócrona de retorno**: minutos para caminar desde cada celda hasta el rover (mismo motor de rutas). El anillo = tiempo restante de EVA |
+| Salir a la tarde para "ahorrar batería" | Sin modelo de traje | Curva REMS histórica con la ventana de la EVA marcada, sin promesas de batería |
+| Alerta de retorno inmediato por RAD | No hay monitoreo en vivo; el umbral sería inventado | Escenario histórico 20/05/2024 (*Replay*) con alerta **ilustrativa** a 3 × la referencia (supuesto declarado) |
+| Comparar 3 rutas (plan 3D) | Complica la pantalla de campo | Una ruta por las paradas; alternativas solo si sobra tiempo |
+
+**Implementado en esta branch (Claude, 15/11 00:00):** pipeline `src/marswalk/` (coordenadas, pendiente, grafo de rutas, isócrona, RAD, REMS con flags de confianza, fotos), paquete `data/processed/gale_radar/` (13 MB), 9 tests en verde y three.js r187 en `web/vendor/`.
+**Escenario por defecto:** Pahrump Hills → 6 paradas → Hematite Hotspot; 5,34 km; EVA de 282/360 min; pendiente máxima 19,1°.
+**No se usan en el radar:** THEMIS (81 m/px), geología SIM 3292, CTX y los recortes `route_full`, `boxwork` y `context`.
+**Pendiente:** la interfaz three.js la genera Fable a partir de `web/README.md` y `PLAN.md` §6.
+**Detalle técnico:** la grilla de ruteo de 4 m conserva el bbox del DEM con borde replicado, así que sus celdas miden 3,98 × 4,00 m. El error de posición es menor a 2 m en el borde S/E.
+**Impacto:** roles 2 y 3 revisan los supuestos del YAML y los paneles; rol 5 elige fotos; rol 6 escribe `science_notes` en el YAML.

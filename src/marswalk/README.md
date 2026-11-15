@@ -1,12 +1,24 @@
-# src/marswalk — processing pipeline
+# src/marswalk — processing pipeline (plan 2D)
 
-Turns `data/raw/` into one static package per site in `data/processed/<site>/` for the viewer.
-The package contract (`site.json`: fields, units, file paths) must be agreed first — see
-`documentos/PLAN.md`, section 4.
+Turns `data/raw/` into the static package `data/processed/gale_radar/` read by the viewer.
 
-Planned modules (owners per the plan):
-- `terrain.py` — DEM crops → uint16 heightmaps (offset/scale per file), slope on a 3–5 m base, roughness (role 1)
-- `route.py` — astronaut cost function, A* routes (fast / safe / science), validation vs. Curiosity traverse (role 2)
-- `radiation.py` — RAD dose series → EVA dose budget, absorbed → equivalent conversion (role 3)
-- `weather.py` — REMS sols → daily cycles (optional, role 3)
-- `build.py` — reads `configs/sites/*.yaml`, runs everything, writes the package (role 1)
+```bash
+python scripts/build_package.py configs/packages/gale_radar.yaml   # ~15 s
+python -m pytest -q
+```
+
+| Module | What it does |
+|---|---|
+| `geo.py` | `Grid`: lon/lat ↔ local meters (x East, y North, origin SW corner) ↔ raster row/col. Spherical Mars, r = 3389.5 km |
+| `terrain.py` | Slope (deg) on the smoothed DEM, hillshade, 2×2 aggregation to the 4 m routing grid (max slope, mean elevation) |
+| `route.py` | `RouteGraph`: 8-neighbour directed graph, hard slope limit, no corner cutting, Tobler-type walking time; shortest path, time-to-target field (return isochrone), post-check |
+| `stops.py` | Named stops, Curiosity's track inside the bbox, downsized Navcam photos |
+| `environment.py` | RAD summary (reference rate, gaps, 2024-05-20 event, illustrative budget) and REMS hourly cycles (confidence flags applied) |
+| `package.py` | PNG / uint16 / JSON writers and the package validator |
+| `build.py` | Reads the YAML, runs everything, writes `site.json`, `preview.png`, and validates |
+
+The output format (layers, encodings, coordinates, files) is documented for the viewer in
+[`web/README.md`](../../web/README.md). `site.json` repeats it in machine-readable form.
+
+To change the scenario (stops, speed, slope limit, EVA duration, start time, science texts), edit
+`configs/packages/gale_radar.yaml` and rebuild. Never edit `data/processed/` by hand.
